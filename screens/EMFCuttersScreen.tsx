@@ -5,7 +5,7 @@ import { useState } from "react";
 export const EMFCuttersScreen = () => {
     const [visible, setVisible] = useState(false);
     
-    // Новые состояния для инструмента
+
     type Tool = {
         id: string;
         name: string;
