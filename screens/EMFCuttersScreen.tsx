@@ -1,11 +1,11 @@
 import { SafeAreaView, ScrollView, View, Text, StyleSheet, Button, Modal, TextInput, Image, TouchableOpacity, Alert, Platform } from "react-native"
 import { AppLayout } from "../Layout/AppLayout"
-import { useState, useEffect, useCallback, SetStateAction } from "react";
-// Импортируем функции для работы с изображениями
+import { useState, useMemo } from "react";
 import { pickImageFromGallery, takePhoto } from "../utils/imageUtils";
 
 export const EMFCuttersScreen = () => {
     const [visible, setVisible] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     type Tool = {
         id: string;
@@ -19,6 +19,18 @@ export const EMFCuttersScreen = () => {
     const [toolId, setToolId] = useState('');
     const [toolComment, setToolComment] = useState('');
     const [toolImage, setToolImage] = useState<string | null>(null);
+
+    // Фильтрация инструментов на основе поискового запроса
+    const filteredTools = useMemo(() => {
+        if (!searchQuery.trim()) {
+            return tools;
+        }
+        const lowercasedQuery = searchQuery.toLowerCase();
+        return tools.filter(tool => 
+            tool.name.toLowerCase().includes(lowercasedQuery) || 
+            tool.id.toLowerCase().includes(lowercasedQuery)
+        );
+    }, [tools, searchQuery]);
 
     // Функция для выбора изображения из галереи
     const pickImage = async () => {
@@ -58,15 +70,12 @@ export const EMFCuttersScreen = () => {
         );
     };
 
-    // Функция сохранения инструмента
     const saveTool = () => {
-        // Проверка обязательных полей
         if (!toolName || !toolId) {
             Alert.alert("Ошибка", "Необходимо указать название и ID инструмента");
             return;
         }
 
-        // Добавляем новый инструмент в список
         const newTool: Tool = {
             id: toolId,
             name: toolName,
@@ -76,8 +85,6 @@ export const EMFCuttersScreen = () => {
         };
 
         setTools([...tools, newTool]);
-
-        // Сброс формы
         setToolName('');
         setToolId('');
         setToolComment('');
@@ -116,8 +123,6 @@ export const EMFCuttersScreen = () => {
                                             </View>
                                         )}
                                     </TouchableOpacity>
-
-                                    {/* Кнопка для выбора из галереи через альтернативный подход */}
                                     <View style={styles.imageButtonsContainer}>
                                         <Button 
                                             title="Выбрать из галереи" 
@@ -158,18 +163,43 @@ export const EMFCuttersScreen = () => {
                         </Modal>
 
                         {tools.length > 0 && (
-                            <View style={styles.toolsList}>
+                            <View style={styles.toolsContainer}>
                                 <Text style={styles.title}>Список инструментов</Text>
-                                {tools.map((tool, index) => (
-                                    <View key={index} style={styles.toolItem}>
-                                        {tool.image && <Image source={{ uri: tool.image }} style={styles.toolItemImage} />}
-                                        <View style={styles.toolInfo}>
-                                            <Text style={styles.toolName}>{tool.name}</Text>
-                                            <Text>ID: {tool.id}</Text>
-                                            {tool.comment ? <Text>Комментарий: {tool.comment}</Text> : null}
-                                        </View>
-                                    </View>
-                                ))}
+                                
+                                <View style={styles.searchContainer}>
+                                    <TextInput
+                                        style={styles.searchInput}
+                                        placeholder="Поиск по названию или ID"
+                                        value={searchQuery}
+                                        onChangeText={setSearchQuery}
+                                        clearButtonMode="while-editing"
+                                    />
+                                </View>
+                                
+                                <View style={styles.toolsList}>
+                                    {filteredTools.length > 0 ? (
+                                        filteredTools.map((tool, index) => (
+                                            <View key={index} style={styles.toolItem}>
+                                                <View style={styles.toolImageContainer}>
+                                                    {tool.image ? (
+                                                        <Image source={{ uri: tool.image }} style={styles.toolItemImage} />
+                                                    ) : (
+                                                        <View style={styles.noImagePlaceholder}>
+                                                            <Text style={styles.noImageText}>Нет фото</Text>
+                                                        </View>
+                                                    )}
+                                                </View>
+                                                <View style={styles.toolInfo}>
+                                                    <Text style={styles.toolName}>{tool.name}</Text>
+                                                    <Text style={styles.toolId}>ID: {tool.id}</Text>
+                                                    {tool.comment ? <Text style={styles.toolComment}>Комментарий: {tool.comment}</Text> : null}
+                                                </View>
+                                            </View>
+                                        ))
+                                    ) : (
+                                        <Text style={styles.noResultsText}>Инструменты не найдены</Text>
+                                    )}
+                                </View>
                             </View>
                         )}
                     </View>
@@ -261,35 +291,100 @@ const styles = StyleSheet.create({
     buttonSpacer: {
         width: 10,
     },
-    toolsList: {
+    toolsContainer: {
         width: '100%',
         marginTop: 20,
-    },
-    toolItem: {
-        flexDirection: 'row',
-        padding: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
         alignItems: 'center',
     },
+    toolsList: {
+        width: '100%',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    toolItem: {
+        width: 200,
+        height: 200,
+        backgroundColor: 'white',
+        borderRadius: 8,
+        padding: 12,
+        margin: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+    },
+    toolImageContainer: {
+        width: '100%',
+        height: 100,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 8,
+    },
     toolItemImage: {
-        width: 50,
-        height: 50,
-        marginRight: 10,
+        width: 100,
+        height: 100,
         borderRadius: 5,
+        resizeMode: 'cover',
+    },
+    noImagePlaceholder: {
+        width: 100,
+        height: 100,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 5,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    noImageText: {
+        color: '#999',
     },
     toolInfo: {
-        flex: 1,
+        alignItems: 'center',
+        width: '100%',
     },
     toolName: {
         fontWeight: 'bold',
         fontSize: 16,
+        marginBottom: 4,
+        textAlign: 'center',
     },
-    // Добавляем новые стили
+    toolId: {
+        fontSize: 14,
+        marginBottom: 4,
+        textAlign: 'center',
+    },
+    toolComment: {
+        fontSize: 12,
+        color: '#666',
+        textAlign: 'center',
+    },
     imageButtonsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
         marginBottom: 15,
+    },
+    searchContainer: {
+        width: '100%',
+        marginBottom: 15,
+        paddingHorizontal: 10,
+    },
+    searchInput: {
+        height: 40,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        backgroundColor: '#fff',
+    },
+    noResultsText: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
+        marginTop: 20,
     },
 });

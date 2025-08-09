@@ -1,14 +1,11 @@
 import { Alert, Platform } from 'react-native';
-// Изменяем импорт для совместимости с Hermes
 import * as ImagePicker from 'expo-image-picker';
 
-/**
- * Запрашивает разрешения для доступа к медиа-библиотеке
- */
+
 export const requestMediaLibraryPermissions = async (): Promise<boolean> => {
   try {
     if (Platform.OS !== 'web') {
-      // Используем современный метод запроса разрешений
+
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Ошибка', 'Нам нужно разрешение для доступа к вашей галерее!');
@@ -18,7 +15,7 @@ export const requestMediaLibraryPermissions = async (): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error('Ошибка при запросе разрешений галереи:', error);
-    // Попробуем альтернативный вариант, если предыдущий не сработал
+  
     try {
       const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -33,13 +30,9 @@ export const requestMediaLibraryPermissions = async (): Promise<boolean> => {
   }
 };
 
-/**
- * Запрашивает разрешения для доступа к камере
- */
 export const requestCameraPermissions = async (): Promise<boolean> => {
   try {
     if (Platform.OS !== 'web') {
-      // Используем современный метод запроса разрешений
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Ошибка', 'Нам нужно разрешение для доступа к вашей камере!');
@@ -49,7 +42,6 @@ export const requestCameraPermissions = async (): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error('Ошибка при запросе разрешений камеры:', error);
-    // Попробуем альтернативный вариант, если предыдущий не сработал
     try {
       const { status } = await ImagePicker.getCameraPermissionsAsync();
       if (status !== 'granted') {
@@ -64,9 +56,7 @@ export const requestCameraPermissions = async (): Promise<boolean> => {
   }
 };
 
-/**
- * Выбирает изображение из галереи
- */
+
 export const pickImageFromGallery = async (): Promise<string | null> => {
   try {
     const hasPermission = await requestMediaLibraryPermissions();
@@ -90,9 +80,6 @@ export const pickImageFromGallery = async (): Promise<string | null> => {
   }
 };
 
-/**
- * Делает снимок с помощью камеры
- */
 export const takePhoto = async (): Promise<string | null> => {
   try {
     const hasPermission = await requestCameraPermissions();
