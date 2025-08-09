@@ -9,7 +9,7 @@ export const EMRCuttersScreen = () => {
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
                     <View style={styles.container}>
                         <Text style={styles.title}>EMR Cutters</Text>
-                        {/* Здесь можно добавить контент для экрана EMR Cutters */}
+                       
                     </View>
                 </ScrollView>
             </SafeAreaView>
