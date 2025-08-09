@@ -1,8 +1,8 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { HomeScreen, RootStackParamList } from './screens/HomeScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { EMRCuttersScreen } from './screens/EmrCuttersScreen';
-import { EMFCuttersScreen } from './screens/EMfCuttersScreen';
+import { EMRCuttersScreen } from './screens/EMRCuttersScreen'; 
+import { EMFCuttersScreen } from './screens/EMFCuttersScreen'; 
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
