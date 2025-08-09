@@ -6,6 +6,7 @@ import {
   Dimensions,
   SafeAreaView,
   ScrollView,
+  Text,
 } from 'react-native';
 import Logo from '../components/assetsTablet/logo/Logo';
 import { PredefinedButton } from '../components/Button/PredefinedButton';
@@ -21,6 +22,23 @@ import {
 interface AppLayoutProps {
   children: ReactNode;
 }
+
+// Вспомогательная функция для обработки текстовых элементов
+const renderChildren = (children: ReactNode): ReactNode => {
+  if (typeof children === 'string' || typeof children === 'number') {
+    return <Text>{children}</Text>;
+  }
+  
+  if (React.isValidElement(children)) {
+    return children;
+  }
+  
+  if (Array.isArray(children)) {
+    return React.Children.map(children, child => renderChildren(child));
+  }
+  
+  return children;
+};
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   return (
@@ -41,7 +59,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </View>
         </View>
         <ScrollView contentContainerStyle={styles.content}>
-          {children}
+          {renderChildren(children)}
         </ScrollView>
       </View>
     </SafeAreaView>

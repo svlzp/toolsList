@@ -13,7 +13,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.minus.toolslist"
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +23,9 @@
       },
       "package": "com.minus.toolslist",
       "edgeToEdgeEnabled": true,
-      "permissions": []
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,6 +34,16 @@
       "eas": {
         "projectId": "63841f11-fae5-4a37-bc63-b89dc689d3ae"
       }
-    }
+    },
+    "jsEngine": "hermes",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Приложению требуется доступ к фотографиям.",
+          "cameraPermission": "Приложению требуется доступ к камере."
+        }
+      ]
+    ]
   }
 }

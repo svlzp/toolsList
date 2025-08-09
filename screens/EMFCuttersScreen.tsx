@@ -1,10 +1,11 @@
-import { SafeAreaView, ScrollView, View, Text, StyleSheet, Button, Modal, TextInput, Image, TouchableOpacity, Alert } from "react-native"
+import { SafeAreaView, ScrollView, View, Text, StyleSheet, Button, Modal, TextInput, Image, TouchableOpacity, Alert, Platform } from "react-native"
 import { AppLayout } from "../Layout/AppLayout"
-import { useState } from "react";
+import { useState, useEffect, useCallback, SetStateAction } from "react";
+// Импортируем функции для работы с изображениями
+import { pickImageFromGallery, takePhoto } from "../utils/imageUtils";
 
 export const EMFCuttersScreen = () => {
     const [visible, setVisible] = useState(false);
-    
 
     type Tool = {
         id: string;
@@ -18,50 +19,78 @@ export const EMFCuttersScreen = () => {
     const [toolId, setToolId] = useState('');
     const [toolComment, setToolComment] = useState('');
     const [toolImage, setToolImage] = useState<string | null>(null);
-    
-    // Функция для имитации выбора изображения
-    const pickImage = () => {
-        // В реальном приложении здесь будет использоваться react-native-image-picker или другая библиотека
-        Alert.alert("Выбор изображения", "В реальном приложении здесь откроется галерея для выбора фото");
-        // Для демонстрации установим заглушку URL
-        setToolImage("https://via.placeholder.com/150");
+
+    // Функция для выбора изображения из галереи
+    const pickImage = async () => {
+        const imageUri = await pickImageFromGallery();
+        if (imageUri) {
+            setToolImage(imageUri);
+        }
     };
-    
+
+    // Функция для открытия камеры
+    const openCamera = async () => {
+        const imageUri = await takePhoto();
+        if (imageUri) {
+            setToolImage(imageUri);
+        }
+    };
+
+    // Функция для показа меню выбора источника изображения
+    const handleImageSelection = () => {
+        Alert.alert(
+            "Выберите источник",
+            "Откуда вы хотите взять изображение?",
+            [
+                {
+                    text: "Отмена",
+                    style: "cancel"
+                },
+                {
+                    text: "Галерея",
+                    onPress: pickImage
+                },
+                {
+                    text: "Камера",
+                    onPress: openCamera
+                }
+            ]
+        );
+    };
+
     // Функция сохранения инструмента
     const saveTool = () => {
+        // Проверка обязательных полей
         if (!toolName || !toolId) {
-            Alert.alert("Ошибка", "Название и ID обязательны для заполнения");
+            Alert.alert("Ошибка", "Необходимо указать название и ID инструмента");
             return;
         }
-        
-        const newTool = {
+
+        // Добавляем новый инструмент в список
+        const newTool: Tool = {
             id: toolId,
             name: toolName,
             comment: toolComment,
             image: toolImage,
-            date: new Date().toISOString()
+            date: new Date().toLocaleDateString(),
         };
-        
+
         setTools([...tools, newTool]);
-        
-        // Очищаем форму
+
+        // Сброс формы
         setToolName('');
         setToolId('');
         setToolComment('');
         setToolImage(null);
-        
-        // Закрываем модальное окно
         setVisible(false);
-        
-        Alert.alert("Успешно", "Инструмент добавлен в список");
     };
-    
+
     return (
         <AppLayout>
             <SafeAreaView style={styles.safeArea}>
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
                     <View style={styles.container}>
-                        <Button title="Открыть модалку" onPress={() => setVisible(true)} />
+                        <Button title="Добавить инструмент" onPress={() => setVisible(true)} />
 
                         <Modal
                             visible={visible}
@@ -72,33 +101,44 @@ export const EMFCuttersScreen = () => {
                             <View style={styles.modalBackground}>
                                 <View style={styles.modalContent}>
                                     <Text style={styles.modalTitle}>Добавление инструмента</Text>
-                                    
-                                    
-                                    <TouchableOpacity style={styles.imageContainer} onPress={pickImage}>
+
+                                    <TouchableOpacity
+                                        style={styles.imageContainer}
+                                        onPress={handleImageSelection}
+                                    >
                                         {toolImage ? (
                                             <Image source={{ uri: toolImage }} style={styles.toolImage} />
                                         ) : (
                                             <View style={styles.placeholderImage}>
-                                                <Text>Нажмите для добавления фото</Text>
+                                                <Text style={styles.placeholderText}>
+                                                    Нажмите для выбора изображения
+                                                </Text>
                                             </View>
                                         )}
                                     </TouchableOpacity>
-                                    
-                                 
+
+                                    {/* Кнопка для выбора из галереи через альтернативный подход */}
+                                    <View style={styles.imageButtonsContainer}>
+                                        <Button 
+                                            title="Выбрать из галереи" 
+                                            onPress={pickImage} 
+                                        />
+                                    </View>
+
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Название инструмента"
                                         value={toolName}
                                         onChangeText={setToolName}
                                     />
-                                    
+
                                     <TextInput
                                         style={styles.input}
                                         placeholder="ID инструмента"
                                         value={toolId}
                                         onChangeText={setToolId}
                                     />
-                                    
+
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Комментарий"
@@ -107,8 +147,7 @@ export const EMFCuttersScreen = () => {
                                         multiline
                                         numberOfLines={3}
                                     />
-                                    
-                                 
+
                                     <View style={styles.buttonContainer}>
                                         <Button title="Сохранить" onPress={saveTool} />
                                         <View style={styles.buttonSpacer} />
@@ -117,8 +156,7 @@ export const EMFCuttersScreen = () => {
                                 </View>
                             </View>
                         </Modal>
-                        
-              
+
                         {tools.length > 0 && (
                             <View style={styles.toolsList}>
                                 <Text style={styles.title}>Список инструментов</Text>
@@ -198,6 +236,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 10,
     },
+    placeholderText: {
+        textAlign: 'center',
+        color: '#666',
+    },
     toolImage: {
         width: '100%',
         height: '100%',
@@ -242,5 +284,12 @@ const styles = StyleSheet.create({
     toolName: {
         fontWeight: 'bold',
         fontSize: 16,
+    },
+    // Добавляем новые стили
+    imageButtonsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        marginBottom: 15,
     },
 });
