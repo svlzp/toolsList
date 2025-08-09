@@ -6,6 +6,8 @@ import { pickImageFromGallery, takePhoto } from "../utils/imageUtils";
 export const EMFCuttersScreen = () => {
     const [visible, setVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
+    const [detailsModalVisible, setDetailsModalVisible] = useState(false);
 
     type Tool = {
         id: string;
@@ -20,7 +22,6 @@ export const EMFCuttersScreen = () => {
     const [toolComment, setToolComment] = useState('');
     const [toolImage, setToolImage] = useState<string | null>(null);
 
-    // Фильтрация инструментов на основе поискового запроса
     const filteredTools = useMemo(() => {
         if (!searchQuery.trim()) {
             return tools;
@@ -32,7 +33,7 @@ export const EMFCuttersScreen = () => {
         );
     }, [tools, searchQuery]);
 
-    // Функция для выбора изображения из галереи
+
     const pickImage = async () => {
         const imageUri = await pickImageFromGallery();
         if (imageUri) {
@@ -40,7 +41,7 @@ export const EMFCuttersScreen = () => {
         }
     };
 
-    // Функция для открытия камеры
+
     const openCamera = async () => {
         const imageUri = await takePhoto();
         if (imageUri) {
@@ -48,7 +49,7 @@ export const EMFCuttersScreen = () => {
         }
     };
 
-    // Функция для показа меню выбора источника изображения
+ 
     const handleImageSelection = () => {
         Alert.alert(
             "Выберите источник",
@@ -92,6 +93,11 @@ export const EMFCuttersScreen = () => {
         setVisible(false);
     };
 
+    const openToolDetails = (tool: Tool) => {
+        setSelectedTool(tool);
+        setDetailsModalVisible(true);
+    };
+
     return (
         <AppLayout>
             <SafeAreaView style={styles.safeArea}>
@@ -123,13 +129,6 @@ export const EMFCuttersScreen = () => {
                                             </View>
                                         )}
                                     </TouchableOpacity>
-                                    <View style={styles.imageButtonsContainer}>
-                                        <Button 
-                                            title="Выбрать из галереи" 
-                                            onPress={pickImage} 
-                                        />
-                                    </View>
-
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Название инструмента"
@@ -162,6 +161,50 @@ export const EMFCuttersScreen = () => {
                             </View>
                         </Modal>
 
+                        <Modal
+                            visible={detailsModalVisible}
+                            animationType="slide"
+                            transparent={true}
+                            onRequestClose={() => setDetailsModalVisible(false)}
+                        >
+                            <View style={styles.modalBackground}>
+                                <View style={styles.modalContent}>
+                                    <Text style={styles.modalTitle}>Детали инструмента</Text>
+                                    
+                                    {selectedTool && (
+                                        <>
+                                            <View style={styles.detailsImageContainer}>
+                                                {selectedTool.image ? (
+                                                    <Image source={{ uri: selectedTool.image }} style={styles.detailsImage} />
+                                                ) : (
+                                                    <View style={styles.noImagePlaceholder}>
+                                                        <Text style={styles.noImageText}>Нет фото</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                            
+                                            <View style={styles.detailsInfo}>
+                                                <Text style={styles.detailsName}>{selectedTool.name}</Text>
+                                                <Text style={styles.detailsId}>ID: {selectedTool.id}</Text>
+                                                {selectedTool.comment ? (
+                                                    <Text style={styles.detailsComment}>Комментарий: {selectedTool.comment}</Text>
+                                                ) : null}
+                                                <Text style={styles.detailsDate}>Добавлен: {selectedTool.date}</Text>
+                                            </View>
+                                            
+                                            <View style={styles.buttonContainer}>
+                                                <Button 
+                                                    title="Закрыть" 
+                                                    onPress={() => setDetailsModalVisible(false)} 
+                                                    color="#007AFF" 
+                                                />
+                                            </View>
+                                        </>
+                                    )}
+                                </View>
+                            </View>
+                        </Modal>
+
                         {tools.length > 0 && (
                             <View style={styles.toolsContainer}>
                                 <Text style={styles.title}>Список инструментов</Text>
@@ -179,7 +222,12 @@ export const EMFCuttersScreen = () => {
                                 <View style={styles.toolsList}>
                                     {filteredTools.length > 0 ? (
                                         filteredTools.map((tool, index) => (
-                                            <View key={index} style={styles.toolItem}>
+                                            <TouchableOpacity
+                                                key={index}
+                                                style={styles.toolItem}
+                                                onPress={() => openToolDetails(tool)}
+                                                activeOpacity={0.7}
+                                            >
                                                 <View style={styles.toolImageContainer}>
                                                     {tool.image ? (
                                                         <Image source={{ uri: tool.image }} style={styles.toolItemImage} />
@@ -192,9 +240,9 @@ export const EMFCuttersScreen = () => {
                                                 <View style={styles.toolInfo}>
                                                     <Text style={styles.toolName}>{tool.name}</Text>
                                                     <Text style={styles.toolId}>ID: {tool.id}</Text>
-                                                    {tool.comment ? <Text style={styles.toolComment}>Комментарий: {tool.comment}</Text> : null}
+                                                    {tool.comment ? <Text style={styles.toolComment} numberOfLines={1} ellipsizeMode="tail">Комментарий: {tool.comment}</Text> : null}
                                                 </View>
-                                            </View>
+                                            </TouchableOpacity>
                                         ))
                                     ) : (
                                         <Text style={styles.noResultsText}>Инструменты не найдены</Text>
@@ -386,5 +434,43 @@ const styles = StyleSheet.create({
         color: '#666',
         textAlign: 'center',
         marginTop: 20,
+    },
+    detailsImageContainer: {
+        width: '100%',
+        height: 200,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 15,
+    },
+    detailsImage: {
+        width: 180,
+        height: 180,
+        borderRadius: 5,
+        resizeMode: 'cover',
+    },
+    detailsInfo: {
+        width: '100%',
+        marginBottom: 15,
+    },
+    detailsName: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    detailsId: {
+        fontSize: 16,
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    detailsComment: {
+        fontSize: 14,
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    detailsDate: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
     },
 });
