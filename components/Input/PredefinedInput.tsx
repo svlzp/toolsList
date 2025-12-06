@@ -33,7 +33,8 @@ interface PredefinedInputProps {
   keyboardType?: KeyboardTypeOptions; // для установки типа клавиатуры если не телефон
   isRequired?: boolean;       // звёздочка для обязательных полей
   style?: object; //  свойство для переопределения стилей
-  isDisabled?: boolean; //  свойство для блокировки вводаы
+  isDisabled?: boolean; //  свойство для блокировки ввода
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters'; // управление автозаглавными буквами
 }
 
 export const PredefinedInput: React.FC <PredefinedInputProps> = ({
@@ -57,7 +58,8 @@ export const PredefinedInput: React.FC <PredefinedInputProps> = ({
   keyboardType,
   isRequired = false,
   style,
-  isDisabled, // деструктуризация нового свойства
+  isDisabled,
+  autoCapitalize = 'none',
 }) => {
   const [internalValue, setInternalValue] = useState<string>(value);
   const [isPasswordVisible, setIsPasswordVisible] = useState<boolean>(false);
@@ -223,7 +225,8 @@ export const PredefinedInput: React.FC <PredefinedInputProps> = ({
             keyboardType={finalKeyboardType}
             multiline={multiline || textArea}
             secureTextEntry={isPassword && !isPasswordVisible}
-            editable={!isDisabled} // блокировка ввода, если isDisabled true
+            editable={!isDisabled}
+            autoCapitalize={autoCapitalize}
           />
 
           {showClearButton && internalValue.length > 0 && (

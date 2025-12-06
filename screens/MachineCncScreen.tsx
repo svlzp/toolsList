@@ -1,14 +1,15 @@
-import { SafeAreaView, ScrollView, View, Text, StyleSheet } from "react-native"
+import {  ScrollView, View, Text, StyleSheet } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import { AppLayout } from "../Layout/AppLayout"
 
 
-export const EMRCuttersScreen = () => {
+export const MachineCncScreen = () => {
     return(
         <AppLayout>
             <SafeAreaView style={styles.safeArea}>
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
                     <View style={styles.container}>
-                        <Text style={styles.title}>EMR Cutters</Text>
+                        <Text style={styles.title}>MachineCNC</Text>
                        
                     </View>
                 </ScrollView>

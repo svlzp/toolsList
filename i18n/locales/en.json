@@ -1,0 +1,67 @@
+{
+  "login": {
+    "title": "Login",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign In",
+    "register": "Register",
+    "rememberMe": "Remember me",
+    "emailError": "Enter a valid email",
+    "passwordError": "Minimum 6 characters"
+  },
+  "register": {
+    "title": "Registration",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Register",
+    "login": "Already have an account? Sign In"
+  },
+  "tools": {
+    "title": "Tools List",
+    "add": "Add Tool",
+    "addTitle": "Add Tool",
+    "name": "Tool Name",
+    "toolId": "Tool ID",
+    "description": "Description",
+    "size": "Size",
+    "type": "Type",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "details": "Tool Details",
+    "noPhoto": "No photo",
+    "noTools": "No tools",
+    "notFound": "Tools not found",
+    "search": "Search by name or ID",
+    "images": "images",
+    "selectImage": "Select source",
+    "imageQuestion": "Where do you want to get the image from?",
+    "gallery": "Gallery",
+    "camera": "Camera",
+    "maxImages": "Maximum 10 images",
+    "loading": "Loading tools...",
+    "error": "Loading error",
+    "retry": "Retry",
+    "deleteConfirm": "Delete",
+    "deleteQuestion": "Are you sure you want to delete this tool?",
+    "success": "Success",
+    "added": "Tool added",
+    "deleted": "Tool deleted",
+    "addError": "Failed to add tool",
+    "deleteError": "Failed to delete tool",
+    "required": "Name and ID are required"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "error": "Error",
+    "success": "Success"
+  },
+  "languages": {
+    "russian": "Русский",
+    "english": "English",
+    "hebrew": "עברית"
+  }
+}

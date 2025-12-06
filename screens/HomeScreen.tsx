@@ -2,15 +2,18 @@
 import { useState } from 'react';
 import { BuyProductCard, ReceiveOrderCard, RepairDeviceCard, ViewIconCard } from '../components/Card/PredefinedCards';
 import { PredefinedButton } from '../components/Button/PredefinedButton';
-import { Animated, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { getOrientation } from '../hooks/orientation';
 import { AppLayout } from '../Layout/AppLayout';
 
 export type RootStackParamList = {
   Home: undefined;
-  EMRCutters: undefined;
-  EMFCutters: undefined;
-  // добавьте другие экраны при необходимости
+  MachineCnc: undefined;
+  Tools: undefined;
+  Login: undefined;
+  Register: undefined;
+  StoreSelection: undefined;
 };
 
 
@@ -47,10 +50,10 @@ export function HomeScreen({ navigation }: { navigation: any }) {
             </View>
             <View style={[styles.containerCard]}>
               <View style={styles.cardItem}>
-                <BuyProductCard onPress={() => navigation.navigate('EMRCutters')} selected={selectedCard === 0} />
+                <BuyProductCard onPress={() => navigation.navigate('MachineCnc')} selected={selectedCard === 0} />
               </View>
               <View style={styles.cardItem}>
-                <RepairDeviceCard onPress={() => navigation.navigate('EMFCutters')} selected={selectedCard === 1} />
+                <RepairDeviceCard onPress={() => navigation.navigate('Tools')} selected={selectedCard === 1} />
               </View>
               <View style={styles.cardItem}>
                 <ReceiveOrderCard onPress={() => handleCardClick(2)} selected={selectedCard === 2} />

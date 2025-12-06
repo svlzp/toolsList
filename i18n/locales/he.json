@@ -1,0 +1,67 @@
+{
+  "login": {
+    "title": "כניסה",
+    "email": "אימייל",
+    "password": "סיסמה",
+    "submit": "התחבר",
+    "register": "הרשמה",
+    "rememberMe": "זכור אותי",
+    "emailError": "הזן אימייל תקין",
+    "passwordError": "מינימום 6 תווים"
+  },
+  "register": {
+    "title": "הרשמה",
+    "name": "שם",
+    "email": "אימייל",
+    "password": "סיסמה",
+    "submit": "הרשם",
+    "login": "כבר יש לך חשבון? התחבר"
+  },
+  "tools": {
+    "title": "רשימת כלים",
+    "add": "הוסף כלי",
+    "addTitle": "הוספת כלי",
+    "name": "שם הכלי",
+    "toolId": "מזהה כלי",
+    "description": "תיאור",
+    "size": "גודל",
+    "type": "סוג",
+    "save": "שמור",
+    "saving": "שומר...",
+    "cancel": "ביטול",
+    "delete": "מחק",
+    "close": "סגור",
+    "details": "פרטי כלי",
+    "noPhoto": "אין תמונה",
+    "noTools": "אין כלים",
+    "notFound": "כלים לא נמצאו",
+    "search": "חיפוש לפי שם או מזהה",
+    "images": "תמונות",
+    "selectImage": "בחר מקור",
+    "imageQuestion": "מאיפה תרצה לקחת את התמונה?",
+    "gallery": "גלריה",
+    "camera": "מצלמה",
+    "maxImages": "מקסימום 10 תמונות",
+    "loading": "טוען כלים...",
+    "error": "שגיאת טעינה",
+    "retry": "נסה שוב",
+    "deleteConfirm": "מחיקה",
+    "deleteQuestion": "האם אתה בטוח שברצונך למחוק כלי זה?",
+    "success": "הצלחה",
+    "added": "הכלי נוסף",
+    "deleted": "הכלי נמחק",
+    "addError": "הוספת הכלי נכשלה",
+    "deleteError": "מחיקת הכלי נכשלה",
+    "required": "שם ומזהה נדרשים"
+  },
+  "common": {
+    "cancel": "ביטול",
+    "error": "שגיאה",
+    "success": "הצלחה"
+  },
+  "languages": {
+    "russian": "Русский",
+    "english": "English",
+    "hebrew": "עברית"
+  }
+}

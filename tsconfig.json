@@ -1,19 +1,9 @@
 {
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "NodeNext",
-    "jsx": "react-jsx",
     "strict": true,
-    "moduleResolution": "NodeNext",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "types": [
-      "node",
-      "react",
-      "react-native"
-    ]
-  },
-  "extends": "expo/tsconfig.base"
+    "paths": {
+      "@/*": ["./*"]
+    }
+  }
 }

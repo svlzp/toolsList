@@ -4,12 +4,12 @@ import {
   View,
   Alert,
   Dimensions,
-  SafeAreaView,
   ScrollView,
   Text,
 } from 'react-native';
 import Logo from '../components/assetsTablet/logo/Logo';
 import { PredefinedButton } from '../components/Button/PredefinedButton';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   EnglishButton,
   HebrewButton,
@@ -23,7 +23,7 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
-// Вспомогательная функция для обработки текстовых элементов
+
 const renderChildren = (children: ReactNode): ReactNode => {
   if (typeof children === 'string' || typeof children === 'number') {
     return <Text>{children}</Text>;
@@ -54,6 +54,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <RussianButton onPress={() => Alert.alert('Russian')} />
               <EnglishButton onPress={() => Alert.alert('English')} />
               <HebrewButton onPress={() => Alert.alert('Hebrew')} />
+                <PredefinedButton type='text' label="Logout" onPress={() => Alert.alert('Logout')} />
             </View>
            
           </View>
