@@ -5,9 +5,17 @@ import { useAppSelector } from './reduxHooks';
 
 const AUTH_STORAGE_KEY = '@auth_tokens';
 
+interface StoredUser {
+  id: string | number;
+  email: string;
+  name?: string;
+  role: string;
+}
+
 interface StoredAuth {
   accessToken: string;
   refreshToken?: string;
+  user?: StoredUser;
 }
 
 

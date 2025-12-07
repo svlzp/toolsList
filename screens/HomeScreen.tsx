@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
 import { BuyProductCard, ReceiveOrderCard, RepairDeviceCard, ViewIconCard } from '../components/Card/PredefinedCards';
-import { PredefinedButton } from '../components/Button/PredefinedButton';
 import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getOrientation } from '../hooks/orientation';
@@ -13,7 +12,7 @@ export type RootStackParamList = {
   Tools: undefined;
   Login: undefined;
   Register: undefined;
-  StoreSelection: undefined;
+  Learning: undefined;
 };
 
 
@@ -30,10 +29,6 @@ export function HomeScreen({ navigation }: { navigation: any }) {
       duration: 500,
       useNativeDriver: true,
     }).start();
-  };
-
-  const handleNext = () => {
-    // Логика для кнопки "Next"
   };
 
   const handleLayoutChange = () => {
@@ -56,31 +51,24 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                 <RepairDeviceCard onPress={() => navigation.navigate('Tools')} selected={selectedCard === 1} />
               </View>
               <View style={styles.cardItem}>
-                <ReceiveOrderCard onPress={() => handleCardClick(2)} selected={selectedCard === 2} />
+                <ReceiveOrderCard onPress={() => navigation.navigate('Learning')} selected={selectedCard === 2} />
               </View>
               <View style={styles.cardItem}>
                 <ViewIconCard onPress={() => handleCardClick(3)} selected={selectedCard === 3} />
               </View>
             </View>
           </View>
-          {selectedCard !== null && (
-            <Animated.View style={[styles.buttonContainer, { opacity: buttonOpacity }]}>
-              <PredefinedButton type="green" width={200} height={40} onPress={handleNext} label={'Next'} />
-            </Animated.View>
-          )}
+          
         </ScrollView>
       </SafeAreaView>
     </AppLayout>
   );
 }
 
-// Заглушки для других экранов (создайте отдельные файлы)
-function BuyProductScreen() {
-  return <View><Text>Buy Product Screen</Text></View>;
-}
+
 
 function NewOrderScreen() {
-  return <View><Text>New Order Screen</Text></View>;
+  return <View><Text>Settings</Text></View>;
 }
 
 

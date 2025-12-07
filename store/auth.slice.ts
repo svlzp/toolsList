@@ -11,8 +11,9 @@ interface JwtPayload {
 }
 
 interface User {
-  id: string;
+  id: string | number;
   email: string;
+  name?: string;
   role: string;
 }
 
@@ -60,13 +61,14 @@ const AuthSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setTokens(state, action: PayloadAction<{ accessToken: string; refreshToken?: string }>) {
-      const { accessToken, refreshToken } = action.payload;
+    setTokens(state, action: PayloadAction<{ accessToken: string; refreshToken?: string; user?: User }>) {
+      const { accessToken, refreshToken, user } = action.payload;
       state.accessToken = accessToken;
       if (refreshToken) {
         state.refreshToken = refreshToken;
       }
-      state.user = getUserFromToken(accessToken);
+   
+      state.user = user || getUserFromToken(accessToken);
       state.isAuthenticated = !isTokenExpired(accessToken);
     },
     setRefreshToken(state, action: PayloadAction<string>) {

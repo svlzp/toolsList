@@ -43,7 +43,8 @@
           "photosPermission": "Приложению требуется доступ к фотографиям.",
           "cameraPermission": "Приложению требуется доступ к камере."
         }
-      ]
+      ],
+      "expo-localization"
     ]
   }
 }

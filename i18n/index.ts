@@ -1,6 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import * as RNLocalize from 'react-native-localize';
+import * as Localization from 'expo-localization';
 
 import ru from './locales/ru.json';
 import en from './locales/en.json';
@@ -14,11 +14,11 @@ const resources = {
 
 
 const getDeviceLanguage = (): string => {
-  const locales = RNLocalize.getLocales();
+  const locales = Localization.getLocales();
   if (locales.length > 0) {
     const languageCode = locales[0].languageCode;
   
-    if (['ru', 'en', 'he'].includes(languageCode)) {
+    if (languageCode && ['ru', 'en', 'he'].includes(languageCode)) {
       return languageCode;
     }
   }

@@ -14,7 +14,7 @@ interface CardProps {
 export const BuyProductCard = ({ onPress, selected }: CardProps) => (
   <Card
     icon={<Cart />}
-    text="EMR Cutters"
+    text="Machine CNC"
     onPress={onPress}
     selected={selected}
   />
@@ -23,7 +23,7 @@ export const BuyProductCard = ({ onPress, selected }: CardProps) => (
 export const RepairDeviceCard = ({ onPress, selected }: CardProps) => (
   <Card
     icon={<RepaireIcon />}
-    text="EMF Cutters"
+    text="Tools"
     onPress={onPress}
     selected={selected}
   />
@@ -32,7 +32,7 @@ export const RepairDeviceCard = ({ onPress, selected }: CardProps) => (
 export const ReceiveOrderCard = ({ onPress, selected }: CardProps) => (
   <Card
     icon={<PackageIcon />}
-    text="Receive Order"
+    text="Learning"
     onPress={onPress}
     selected={selected}
   />
@@ -40,7 +40,7 @@ export const ReceiveOrderCard = ({ onPress, selected }: CardProps) => (
 export const ViewIconCard = ({ onPress, selected }: CardProps) => (
     <Card
       icon={<ViewIcon />}
-      text='Look Around'
+      text='Settings'
       onPress={onPress}
       selected={selected}
     />

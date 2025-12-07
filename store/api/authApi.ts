@@ -6,9 +6,17 @@ interface LoginRequest {
   password: string;
 }
 
+interface UserResponse {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+}
+
 interface LoginResponse {
   accessToken: string;
   refreshToken?: string;
+  user: UserResponse;
 }
 interface RegisterRequest {
   email: string;

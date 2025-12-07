@@ -4,9 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Dimensions,
-  ScaledSize,
-  Alert,
   TouchableOpacity,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form'; 
@@ -44,15 +41,21 @@ export const LoginScreen = () => {
   };
 
   const onSubmit = async (formData: { email: string; password: string }) => {
+    console.log('Submitting form with data:', formData);
+       
     try {
       const result = await addAuth(formData).unwrap();
-      setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
-      
+      setTokens({ 
+        accessToken: result.accessToken, 
+        refreshToken: result.refreshToken,
+        user: result.user 
+      });
       
       if (rememberMe) {
         await saveAuthToStorage({ 
           accessToken: result.accessToken, 
-          refreshToken: result.refreshToken 
+          refreshToken: result.refreshToken,
+          user: result.user
         });
       }
     } catch (err) {

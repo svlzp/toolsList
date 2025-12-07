@@ -9,9 +9,11 @@ import { Provider } from 'react-redux';
 import { store } from './store/store';
 import { useAuthPersist } from './hooks/useAuthPersist';
 import { useActions } from './hooks/useActions';
+import { useAppSelector } from './hooks/reduxHooks';
 import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import './i18n'; // Инициализация i18n
+import './i18n'; 
+import { LearningScreen } from './screens/LearningScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -19,11 +21,11 @@ function AppContent() {
   const { isLoading, tokens } = useAuthPersist();
   const { setTokens } = useActions();
   const [isReady, setIsReady] = useState(false);
+  const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
 
   useEffect(() => {
     if (!isLoading) {
       if (tokens) {
-        // Восстанавливаем токены из AsyncStorage
         setTokens(tokens);
       }
       setIsReady(true);
@@ -40,12 +42,22 @@ function AppContent() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
-        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="MachineCnc" component={MachineCncScreen}  options={{ headerShown: false }} />
-        <Stack.Screen name="Tools" component={ToolsScreen}  options={{ headerShown: false }} />
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {isAuthenticated ? (
+        
+          <>
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="MachineCnc" component={MachineCncScreen} />
+            <Stack.Screen name="Tools" component={ToolsScreen} />
+            <Stack.Screen name="Learning" component={LearningScreen} />
+          </>
+        ) : (
+        
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );
