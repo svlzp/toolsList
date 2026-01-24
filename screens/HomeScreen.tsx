@@ -9,10 +9,22 @@ import { AppLayout } from '../Layout/AppLayout';
 export type RootStackParamList = {
   Home: undefined;
   MachineCnc: undefined;
+  WorkOvernightDetail: { machineId: number; machineName: string };
+  WorkDetail: {
+    id: number;
+    name?: string;
+    rt: string;
+    quantity: number;
+    madeBy?: string;
+    leftToMake: number;
+    manufacturingTime?: string;
+  };
   Tools: undefined;
   Login: undefined;
   Register: undefined;
   Learning: undefined;
+  LearningDetail: { learningId: number };
+  LearningEditor: { learningId: number };
 };
 
 

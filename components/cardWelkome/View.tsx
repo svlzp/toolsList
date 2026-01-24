@@ -1,21 +1,93 @@
 import React from "react";
-import Svg, { Path, G } from "react-native-svg";
+import Svg, { Path, G, Circle } from "react-native-svg";
 
-const View = () => (
-  <Svg
-    width="120"
-    height="120"
-    viewBox="0 0 120 120"
-    fill="none"
-  >
-    <G id="Card-icon">
-      <Path
-        id="Vector"
-        d="M32.3758 83.2142C29.5191 83.6328 24.8166 84.4121 21.6883 80.8629C18.56 77.3138 15.8547 68.7438 14.6657 61.0844C12.9112 49.7957 14.6523 40.2816 19.5641 34.2966C22.4587 30.772 26.2572 28.7302 30.55 28.4051C34.226 28.1224 39.719 29.5607 45.0226 38.0216C48.3447 43.3231 50.8718 50.3657 51.9562 57.3415C53.2654 65.7624 54.5412 74.7488 50.0769 77.9706C47.5587 79.7897 45.7507 80.4198 41.478 81.4374C37.9644 82.2723 35.2347 82.7934 32.3758 83.2142ZM27.2948 90.4572L51.5398 85.4563C53.5882 85.0333 55.2314 86.1599 55.9929 89.5354C58.4911 100.615 54.9108 113.872 43.6978 113.872C33.0794 113.872 26.0033 101.768 24.8478 95.2621C24.3201 92.3119 25.0726 90.9136 27.2948 90.4572ZM79.1447 60.0646C74.8719 59.0515 73.064 58.417 70.5457 56.5979C66.0815 53.376 67.3573 44.3896 68.6665 35.9688C69.7508 28.9929 72.278 21.9414 75.6 16.6489C80.8992 8.18794 86.3922 6.74958 90.0727 7.03235C94.361 7.35966 98.1618 9.39696 101.056 12.9216C105.973 18.9066 107.714 28.4207 105.955 39.7094C104.764 47.3688 102.067 55.9099 98.921 59.4879C95.7749 63.066 91.0991 62.2578 88.2335 61.8392C85.368 61.4206 82.656 60.8974 79.1447 60.0646ZM93.3257 69.0822L69.0807 64.0813C67.0322 63.6583 65.389 64.7849 64.6275 68.1604C62.1316 79.2398 65.7119 92.4967 76.9248 92.4967C87.5433 92.4967 94.6193 80.3931 95.7749 73.8871C96.3004 70.9369 95.5478 69.5386 93.3257 69.0822Z"
-        fill="#3A55F8"
-      />
-    </G>
-  </Svg>
-);
+const View = ({ color = "#3A55F8" }) => {
+  // Функция для создания зубьев шестеренки
+  const createGearPath = () => {
+    let path = "M 60 15 ";
+    const teeth = 12;
+    const outerRadius = 45;
+    const innerRadius = 30;
+    const toothDepth = 8;
+
+    for (let i = 0; i < teeth; i++) {
+      const angle = (i * 360) / teeth;
+      const nextAngle = ((i + 1) * 360) / teeth;
+      const midAngle = (angle + nextAngle) / 2;
+
+      // Внешняя точка (конец зуба)
+      const outerAngle = (angle - 90) * (Math.PI / 180);
+      const outerX = 60 + outerRadius * Math.cos(outerAngle);
+      const outerY = 60 + outerRadius * Math.sin(outerAngle);
+
+      // Следующая внешняя точка
+      const nextOuterAngle = (nextAngle - 90) * (Math.PI / 180);
+      const nextOuterX = 60 + outerRadius * Math.cos(nextOuterAngle);
+      const nextOuterY = 60 + outerRadius * Math.sin(nextOuterAngle);
+
+      // Внутренняя точка (основание зуба)
+      const innerAngle = (angle - 90) * (Math.PI / 180);
+      const innerX = 60 + innerRadius * Math.cos(innerAngle);
+      const innerY = 60 + innerRadius * Math.sin(innerAngle);
+
+      // Следующая внутренняя точка
+      const nextInnerAngle = (nextAngle - 90) * (Math.PI / 180);
+      const nextInnerX = 60 + innerRadius * Math.cos(nextInnerAngle);
+      const nextInnerY = 60 + innerRadius * Math.sin(nextInnerAngle);
+
+      path += `L ${outerX} ${outerY} L ${nextOuterX} ${nextOuterY} L ${nextInnerX} ${nextInnerY} L ${innerX} ${innerY} `;
+    }
+
+    path += "Z";
+    return path;
+  };
+
+  return (
+    <Svg
+      width="120"
+      height="120"
+      viewBox="0 0 120 120"
+      fill="none"
+    >
+      <G id="Gear-Icon">
+        {/* Основная шестеренка с зубьями */}
+        <Path
+          d={createGearPath()}
+          fill="none"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinejoin="miter"
+        />
+
+        {/* Внутренний круг */}
+        <Circle
+          cx="60"
+          cy="60"
+          r="18"
+          fill="none"
+          stroke={color}
+          strokeWidth="2"
+        />
+
+        {/* Центральное отверстие */}
+        <Circle
+          cx="60"
+          cy="60"
+          r="8"
+          fill={color}
+          opacity="0.15"
+        />
+
+        {/* Центральная точка */}
+        <Circle
+          cx="60"
+          cy="60"
+          r="3"
+          fill={color}
+        />
+      </G>
+    </Svg>
+  );
+};
 
 export default View;

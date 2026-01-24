@@ -14,6 +14,10 @@ import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import './i18n'; 
 import { LearningScreen } from './screens/LearningScreen';
+import { LearningDetailScreen } from './screens/LearningDetailScreen';
+import { LearningEditorScreen } from './screens/LearningEditorScreen';
+import { WorkOvernightScreen } from './screens/WorkOvernightScreen';
+import { WorkDetailScreen } from './screens/WorkDetailScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -44,15 +48,17 @@ function AppContent() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-        
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="MachineCnc" component={MachineCncScreen} />
+            <Stack.Screen name="WorkOvernightDetail" component={WorkOvernightScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="WorkDetail" component={WorkDetailScreen} options={{ headerShown: false, title: 'Подробно о работе' }} />
             <Stack.Screen name="Tools" component={ToolsScreen} />
             <Stack.Screen name="Learning" component={LearningScreen} />
+            <Stack.Screen name="LearningDetail" component={LearningDetailScreen} options={{ headerShown: false, title: 'Детали урока' }} />
+            <Stack.Screen name="LearningEditor" component={LearningEditorScreen} options={{ headerShown: false, title: 'Редактор урока' }} />
           </>
         ) : (
-        
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />

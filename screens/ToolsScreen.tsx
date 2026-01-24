@@ -1,4 +1,4 @@
-import { ScrollView, View, Text, StyleSheet, Button, TextInput } from "react-native"
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput } from "react-native"
 import { AppLayout } from "../Layout/AppLayout"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useState, useMemo } from "react";
@@ -9,6 +9,8 @@ import { AddItemModal, AddItemFormData } from "../components/Modal/AddItemModal"
 import { ItemDetailsModal, ItemDetails } from "../components/Modal/ItemDetailsModal";
 import { LoadingState, ErrorState } from "../components/States";
 import { createFormDataFromItem, confirmDelete, handleApiCall } from "../utils/formUtils";
+import { getImageUrls, FileSource } from "../utils/imageUtils";
+
 
 type Tool = {
     id: string;
@@ -17,7 +19,7 @@ type Tool = {
     description?: string;
     size?: string;
     type?: string;
-    files?: string[];
+    files?: FileSource[];
 };
 
 export const ToolsScreen = () => {
@@ -27,13 +29,14 @@ export const ToolsScreen = () => {
     const [detailsModalVisible, setDetailsModalVisible] = useState(false);
 
     const { user } = useAppSelector(state => state.auth);
+    const auth = useAppSelector(state => state.auth);
     const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
 
     const { data: tools = [], isLoading, error, refetch, isFetching } = useGetToolsQuery();
     const [addTool, { isLoading: isAdding }] = useAddToolMutation();
     const [deleteTool] = useDeleteToolMutation();
 
-    
+    console.log(tools);
     if (error) {
         console.log('ToolsScreen Error:', JSON.stringify(error));
     }
@@ -43,7 +46,7 @@ export const ToolsScreen = () => {
             return tools;
         }
         const lowercasedQuery = searchQuery.toLowerCase();
-        return tools.filter(tool => 
+        return tools.filter((tool: any) => 
             tool.name.toLowerCase().includes(lowercasedQuery) || 
             tool.tool_id.toLowerCase().includes(lowercasedQuery)
         );
@@ -74,13 +77,13 @@ export const ToolsScreen = () => {
         );
     };
 
-    const handleDeleteTool = (id: string) => {
+    const handleDeleteTool = (id: string | number) => {
         confirmDelete(
             'Удаление',
             'Вы уверены, что хотите удалить этот инструмент?',
             async () => {
                 await handleApiCall(
-                    () => deleteTool(id).unwrap(),
+                    () => deleteTool(String(id)).unwrap(),
                     'Инструмент удален',
                     'Не удалось удалить инструмент',
                     () => {
@@ -118,12 +121,10 @@ export const ToolsScreen = () => {
                         {errorMessage && (
                             <View style={styles.errorBanner}>
                                 <Text style={styles.errorBannerText}>{errorMessage}</Text>
-                                <Button title="Повторить" onPress={refetch} />
+                                <TouchableOpacity onPress={refetch}>
+                                    <Text style={styles.retryButtonText}>Повторить</Text>
+                                </TouchableOpacity>
                             </View>
-                        )}
-
-                        {isAdmin && (
-                            <Button title="Добавить инструмент" onPress={() => setVisible(true)} />
                         )}
 
                         <AddItemModal
@@ -149,7 +150,7 @@ export const ToolsScreen = () => {
                                 id: selectedTool.id,
                                 title: selectedTool.name,
                                 subtitle: `ID: ${selectedTool.tool_id}`,
-                                images: selectedTool.files,
+                                images: getImageUrls(selectedTool.files, auth?.accessToken),
                                 fields: [
                                     { label: 'Описание', value: selectedTool.description },
                                     { label: 'Размер', value: selectedTool.size },
@@ -176,7 +177,7 @@ export const ToolsScreen = () => {
                             
                             <View style={styles.toolsList}>
                                 {filteredTools.length > 0 ? (
-                                    filteredTools.map((tool, index) => (
+                                    filteredTools.map((tool: any, index: number) => (
                                         <ItemCard
                                             key={tool.id || index}
                                             item={{
@@ -184,10 +185,13 @@ export const ToolsScreen = () => {
                                                 title: tool.name,
                                                 subtitle: `ID: ${tool.tool_id}`,
                                                 description: tool.description,
-                                                images: tool.files,
+                                                images: getImageUrls(tool.files, auth?.accessToken),
                                             }}
                                             onPress={() => openToolDetails(tool)}
+                                            onEdit={isAdmin ? () => openToolDetails(tool) : undefined}
+                                            onDelete={isAdmin ? handleDeleteTool : undefined}
                                             variant="tool"
+                                            showMenu={isAdmin}
                                         />
                                     ))
                                 ) : (
@@ -199,6 +203,15 @@ export const ToolsScreen = () => {
                         </View>
                     </View>
                 </ScrollView>
+                )}
+                
+                {isAdmin && (
+                    <TouchableOpacity
+                        style={styles.fab}
+                        onPress={() => setVisible(true)}
+                    >
+                        <Text style={styles.fabText}>+</Text>
+                    </TouchableOpacity>
                 )}
             </SafeAreaView>
         </AppLayout>
@@ -276,5 +289,32 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlign: 'center',
         marginBottom: 10,
+    },
+    retryButtonText: {
+        color: '#007AFF',
+        fontSize: 14,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    fab: {
+        position: 'absolute',
+        bottom: 30,
+        right: 30,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#007AFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    fabText: {
+        fontSize: 36,
+        color: '#fff',
+        fontWeight: '200',
     },
 });

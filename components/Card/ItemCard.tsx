@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
     Image,
     TouchableOpacity,
     StyleSheet,
+    ActionSheetIOS,
+    Platform,
+    Alert,
 } from 'react-native';
 
 export interface CardItem {
@@ -19,52 +22,124 @@ export interface CardItem {
 interface ItemCardProps {
     item: CardItem;
     onPress: (item: CardItem) => void;
+    onEdit?: (item: CardItem) => void;
+    onDelete?: (id: string | number) => Promise<void> | void;
     variant?: 'tool' | 'learning' | 'machine';
+    showMenu?: boolean;
 }
 
 export const ItemCard: React.FC<ItemCardProps> = ({
     item,
     onPress,
+    onEdit,
+    onDelete,
     variant = 'tool',
+    showMenu = false,
 }) => {
-    
     const imageSource = item.imageUrl || (item.images && item.images.length > 0 ? item.images[0] : null);
+    
+    const handleMenuPress = () => {
+        const options = ['Отмена'];
+        const destructiveButtonIndex = -1;
+        let editIndex = -1;
+        let deleteIndex = -1;
+
+        if (onEdit) {
+            options.push('Редактировать');
+            editIndex = options.length - 1;
+        }
+        if (onDelete) {
+            options.push('Удалить');
+            deleteIndex = options.length - 1;
+        }
+
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options,
+                    cancelButtonIndex: 0,
+                    destructiveButtonIndex: deleteIndex !== -1 ? deleteIndex : undefined,
+                },
+                (buttonIndex) => {
+                    if (buttonIndex === editIndex) {
+                        onEdit?.(item);
+                    } else if (buttonIndex === deleteIndex) {
+                        onDelete?.(item.id);
+                    }
+                }
+            );
+        } else {
+            
+            const androidOptions: any[] = [];
+            if (onEdit) {
+                androidOptions.push({
+                    text: 'Редактировать',
+                    onPress: () => onEdit?.(item),
+                });
+            }
+            if (onDelete) {
+                androidOptions.push({
+                    text: 'Удалить',
+                    onPress: () => onDelete?.(item.id),
+                    style: 'destructive' as const,
+                });
+            }
+            androidOptions.push({ text: 'Отмена', style: 'cancel' as const });
+
+            Alert.alert('Действия', 'Выберите действие', androidOptions);
+        }
+    };
 
     return (
-        <TouchableOpacity
-            style={styles.card}
-            onPress={() => onPress(item)}
-            activeOpacity={0.7}
-        >
-            <View style={styles.imageContainer}>
-                {imageSource ? (
-                    <Image source={{ uri: imageSource }} style={styles.image} />
-                ) : (
-                    <View style={styles.noImagePlaceholder}>
-                        <Text style={styles.noImageText}>Нет фото</Text>
-                    </View>
-                )}
-            </View>
-            <View style={styles.info}>
-                <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
-                    {item.title}
-                </Text>
-                {item.subtitle && (
-                    <Text style={styles.subtitle} numberOfLines={1}>
-                        {item.subtitle}
+        <View style={styles.cardWrapper}>
+            <TouchableOpacity
+                style={styles.card}
+                onPress={() => onPress(item)}
+                activeOpacity={0.7}
+            >
+                <View style={styles.imageContainer}>
+                    {imageSource ? (
+                        <Image source={{ uri: imageSource }} style={styles.image} />
+                    ) : (
+                        <View style={styles.noImagePlaceholder}>
+                            <Text style={styles.noImageText}>Нет фото</Text>
+                        </View>
+                    )}
+                </View>
+                <View style={styles.info}>
+                    <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
+                        {item.title}
                     </Text>
-                )}
-                {item.description && (
-                    <Text style={styles.description} numberOfLines={1} ellipsizeMode="tail">
-                        {item.description}
-                    </Text>
-                )}
-            </View>
-        </TouchableOpacity>
+                    {item.subtitle && (
+                        <Text style={styles.subtitle} numberOfLines={1}>
+                            {item.subtitle}
+                        </Text>
+                    )}
+                    {item.description && (
+                        <Text style={styles.description} numberOfLines={1} ellipsizeMode="tail">
+                            {item.description}
+                        </Text>
+                    )}
+                </View>
+            </TouchableOpacity>
+
+            {showMenu && (onEdit || onDelete) && (
+                <TouchableOpacity
+                    style={styles.menuButton}
+                    onPress={handleMenuPress}
+                >
+                    <Text style={styles.menuButtonText}>⋮</Text>
+                </TouchableOpacity>
+            )}
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
+    cardWrapper: {
+        position: 'relative',
+        paddingTop: 0,
+    },
     card: {
         width: 200,
         height: 200,
@@ -127,6 +202,21 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#999',
         textAlign: 'center',
+    },
+    menuButton: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 10,
+    },
+    menuButtonText: {
+        fontSize: 24,
+        color: '#333',
+        fontWeight: 'bold',
     },
 });
 

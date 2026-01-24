@@ -102,3 +102,61 @@ export const takePhoto = async (): Promise<string | null> => {
     return null;
   }
 };
+
+export type FileSource = string | { 
+    url?: string; 
+    path?: string;
+    filename?: string;
+    originalname?: string;
+    size?: number;
+    mimetype?: string;
+    id?: number;
+};
+
+
+export const getImageUrls = (
+    files?: FileSource[],
+    token?: string | null
+): string[] => {
+    if (!files) {
+        return [];
+    }
+    
+    const result = files.map((f: any) => {
+        let url = '';
+        
+        
+        if (f.url) {
+            url = f.url;
+        } else if (f.filename) {
+           
+            url = `uploads/${f.filename}`;
+        } else if (typeof f === 'string') {
+            url = f;
+        } else if (f.path) {
+            url = f.path;
+        }
+        
+    
+        if (!url) {
+            return '';
+        }
+        
+       
+        url = url.replace(/\\/g, '/');
+        
+      
+        if (!/^https?:\/\//.test(url)) {
+            url = 'http://10.100.102.3:4000/' + (url.startsWith('/') ? url.slice(1) : url);
+        }
+        
+       
+        if (token && !url.includes('?')) {
+            url += `?token=${token}`;
+        }
+        
+        return url;
+    }).filter(Boolean);
+    
+    return result;
+};
