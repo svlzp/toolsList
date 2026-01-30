@@ -32,5 +32,18 @@ yarn-error.*
 # local env files
 .env*.local
 
+# Android build
+android/app/build/
+android/.gradle/
+*.apk
+*.aab
+
+# iOS build
+ios/build/
+ios/Pods/
+ios/*.xcworkspace
+*.ipa
+*.dSYM
+
 # typescript
 *.tsbuildinfo

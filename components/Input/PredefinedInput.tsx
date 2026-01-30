@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
+
 interface PredefinedInputProps {
   label?: string;             // "Имя", "Фамилия", "Телефон" и т.п.
   placeholder?: string;       // Подсказка внутри поля
@@ -35,6 +36,7 @@ interface PredefinedInputProps {
   style?: object; //  свойство для переопределения стилей
   isDisabled?: boolean; //  свойство для блокировки ввода
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters'; // управление автозаглавными буквами
+  backgroundColor?: string;   // цвет фона поля (по умолчанию белый)
 }
 
 export const PredefinedInput: React.FC <PredefinedInputProps> = ({
@@ -60,12 +62,13 @@ export const PredefinedInput: React.FC <PredefinedInputProps> = ({
   style,
   isDisabled,
   autoCapitalize = 'none',
+  backgroundColor = '#fff',
 }) => {
   const [internalValue, setInternalValue] = useState<string>(value);
   const [isPasswordVisible, setIsPasswordVisible] = useState<boolean>(false);
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
-  // Новое: синхронизация internalValue при изменении value
+
   useEffect(() => {
     setInternalValue(value);
   }, [value]);
@@ -214,6 +217,7 @@ export const PredefinedInput: React.FC <PredefinedInputProps> = ({
           <TextInput
             style={[
               styles.input,
+              { backgroundColor },
               textArea && styles.textArea,
               inputStyle,
               hasError && styles.errorBorder,
@@ -237,11 +241,9 @@ export const PredefinedInput: React.FC <PredefinedInputProps> = ({
 
           {isPassword && (
             <TouchableOpacity onPress={togglePasswordVisibility} style={styles.eyeButton} disabled={isDisabled}>
-              <Ionicons
-                name={isPasswordVisible ? 'eye-off' : 'eye'}
-                size={22}
-                color="#999"
-              />
+              <Text style={styles.eyeButtonText}>
+                {isPasswordVisible ? '👁️' : '👁️‍🗨️'}
+              </Text>
             </TouchableOpacity>
           )}
 
@@ -380,5 +382,8 @@ const styles = StyleSheet.create({
   requiredStar: {
     color: 'red',
     marginLeft: 4,
+  },
+  eyeButtonText: {
+    fontSize: 20,
   },
 });

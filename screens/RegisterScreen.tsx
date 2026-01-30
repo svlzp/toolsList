@@ -6,11 +6,13 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useForm, Controller } from 'react-hook-form'; 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRegisterMutation } from '../store/api/authApi';
+import { useActions } from '../hooks/useActions';
 import { PredefinedInput } from '../components/Input/PredefinedInput';
 import { PredefinedButton } from '../components/Button/PredefinedButton';
 import GearIcon from '../components/assetsTablet/logo/GearIcon';
@@ -27,19 +29,26 @@ interface RegisterFormData {
 }
 
 export const RegisterScreen = () => {
+  const { t, i18n } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [register, { isLoading }] = useRegisterMutation();
+  const { setLang } = useActions();
   const { control, handleSubmit, formState: { errors } } = useForm<RegisterFormData>(); 
+
+  const changeLanguage = (lang: string) => {
+    i18n.changeLanguage(lang);
+    setLang(lang);
+  }; 
 
   const onSubmit = async (formData: RegisterFormData) => {
     try {
       await register(formData).unwrap();
-      Alert.alert('Успешно', 'Регистрация прошла успешно', [
+      Alert.alert(t('common.success'), t('register.submit'), [
         { text: 'OK', onPress: () => navigation.navigate('Login') }
       ]);
     } catch (err) {
       console.error('Register error:', err);
-      Alert.alert('Ошибка', 'Не удалось зарегистрироваться');
+      Alert.alert(t('common.error'), 'Не удалось зарегистрироваться');
     }
   };
 
@@ -54,7 +63,7 @@ export const RegisterScreen = () => {
               <GearIcon />
             </View>
 
-            <Text style={styles.title}>Регистрация</Text>
+            <Text style={styles.title}>{t('register.title')}</Text>
 
             <Controller 
               control={control}
@@ -64,7 +73,7 @@ export const RegisterScreen = () => {
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <PredefinedInput
-                  label='Имя'
+                  label={t('register.name')}
                   onBlur={onBlur}
                   onChangeText={onChange}
                   value={value}
@@ -81,12 +90,12 @@ export const RegisterScreen = () => {
                 required: true,
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: 'Введите валидный email',
+                  message: t('login.emailError'),
                 },
               }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <PredefinedInput
-                  label='Email'
+                  label={t('register.email')}
                   onBlur={onBlur}
                   onChangeText={onChange}
                   value={value}
@@ -95,7 +104,7 @@ export const RegisterScreen = () => {
               )}
               name="email"
             />
-            {errors.email && <Text style={styles.errorText}>Введите валидный email</Text>} 
+            {errors.email && <Text style={styles.errorText}>{t('login.emailError')}</Text>} 
 
             <Controller 
               control={control}
@@ -106,7 +115,7 @@ export const RegisterScreen = () => {
               render={({ field: { onChange, onBlur, value } }) => (
                 <PredefinedInput
                   isPassword={true}
-                  label='Пароль'
+                  label={t('register.password')}
                   onBlur={onBlur}
                   onChangeText={onChange}
                   value={value}
@@ -115,12 +124,12 @@ export const RegisterScreen = () => {
               )}
               name="password"
             />
-            {errors.password && <Text style={styles.errorText}>Минимум 6 символов</Text>} 
+            {errors.password && <Text style={styles.errorText}>{t('login.passwordError')}</Text>} 
 
             <View style={{marginTop: 20}}>
               <PredefinedButton 
                 type="blue" 
-                label="Зарегистрироваться" 
+                label={t('register.submit')} 
                 onPress={handleSubmit(onSubmit)} 
                 disabled={isLoading} 
               /> 
@@ -130,15 +139,30 @@ export const RegisterScreen = () => {
               <PredefinedButton 
                 type="text" 
                 textColor='#000' 
-                label="Уже есть аккаунт? Войти" 
+                label={t('login.register')} 
                 onPress={() => navigation.navigate('Login')} 
               />
             </View>
 
             <View style={styles.buttonLanguage}>
-              <PredefinedButton type="text" textColor='#000' label="Russian" onPress={() => Alert.alert("Russian")} />
-              <PredefinedButton type="text" textColor='#000' label="English" onPress={() => Alert.alert("English")} />
-              <PredefinedButton type="text" textColor='#000' label="Hebrew" onPress={() => Alert.alert("Hebrew")} />
+              <PredefinedButton 
+                type="text" 
+                textColor={i18n.language === 'ru' ? '#3A55F8' : '#000'} 
+                label={t('languages.russian')} 
+                onPress={() => changeLanguage('ru')} 
+              />
+              <PredefinedButton 
+                type="text" 
+                textColor={i18n.language === 'en' ? '#3A55F8' : '#000'} 
+                label={t('languages.english')} 
+                onPress={() => changeLanguage('en')} 
+              />
+              <PredefinedButton 
+                type="text" 
+                textColor={i18n.language === 'he' ? '#3A55F8' : '#000'} 
+                label={t('languages.hebrew')} 
+                onPress={() => changeLanguage('he')} 
+              />
             </View>
           </View>
         </View>

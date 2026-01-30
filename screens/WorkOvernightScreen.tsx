@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { ScrollView, View, Text, StyleSheet, Button, TextInput, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, View, Text, StyleSheet, Button, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useForm, Controller } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
 import { AppLayout } from '../Layout/AppLayout';
 import {
     useGetAllWorksQuery,
@@ -11,6 +12,12 @@ import {
     WorkOvernight,
 } from '../store/api/workOvernightApi';
 import { useAppSelector } from '../hooks/reduxHooks';
+import { useSearchFilter } from '../hooks/useSearchFilter';
+import { AddButton } from '../components/Button/AddButton';
+import { WorkCard } from '../components/Card/WorkCard';
+import { translateServerArray } from '../utils/translatorUtils';
+import { AddWorkModal } from '../components/Modal/AddWorkModal';
+import { SearchInput } from '../components/Search/SearchInput';
 import { useRoute, useNavigation } from '@react-navigation/native';
 
 interface RouteParams {
@@ -29,6 +36,7 @@ interface WorkFormData {
 }
 
 export const WorkOvernightScreen = () => {
+    const { t, i18n } = useTranslation();
     const route = useRoute();
     const navigation = useNavigation<any>();
     const params = route.params as RouteParams;
@@ -52,7 +60,7 @@ export const WorkOvernightScreen = () => {
         },
     });
 
-    const { data: allWorks = [], isLoading, error, refetch } = useGetAllWorksQuery({
+    const { data: rawAllWorks = [], isLoading, error, refetch } = useGetAllWorksQuery({
         includeArchived: showArchived,
         machineId: params.machineId,
     });
@@ -60,24 +68,17 @@ export const WorkOvernightScreen = () => {
     const [deleteWork] = useDeleteWorkMutation();
     const [updateQuantity] = useUpdateQuantityByRtMutation();
 
-    console.log('All Works:', allWorks);
+    const [allWorks, setAllWorks] = useState<any[]>([]);
+    useEffect(() => {
+        translateServerArray(rawAllWorks, ['title', 'description', 'rt']).then(setAllWorks);
+    }, [rawAllWorks, i18n.language]);
 
-    // Фильтруем работы по названию
-    const filteredWorks = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return allWorks;
-        }
-        const lowercasedQuery = searchQuery.toLowerCase();
-        return allWorks.filter((work: WorkOvernight) =>
-            work.title.toLowerCase().includes(lowercasedQuery) ||
-            work.rt.toLowerCase().includes(lowercasedQuery) ||
-            (work.description?.toLowerCase().includes(lowercasedQuery) ?? false)
-        );
-    }, [allWorks, searchQuery]);
+    const filteredWorks = useSearchFilter(allWorks, searchQuery, {
+        searchFields: ['title', 'rt', 'description'],
+    });
 
     const onSubmit = async (data: WorkFormData) => {
         try {
-            // Парсим stages из строки (разделённые запятой или новой строкой)
             const stagesArray = data.stages
                 ? data.stages.split('\n').map(s => s.trim()).filter(s => s.length > 0)
                 : undefined;
@@ -95,27 +96,27 @@ export const WorkOvernightScreen = () => {
 
             reset();
             setShowAddModal(false);
-            Alert.alert('Успех', 'Работа добавлена');
+            Alert.alert(t('works.success'), t('works.added'));
         } catch (error) {
             console.error('Ошибка при добавлении работы:', error);
-            Alert.alert('Ошибка', 'Не удалось добавить работу');
+            Alert.alert(t('common.error'), t('works.addError'));
         }
     };
 
     const handleDeleteWork = (id: number, title: string) => {
         Alert.alert(
-            'Удаление',
-            `Вы уверены, что хотите удалить работу "${title}"?`,
+            t('works.deleteConfirm'),
+            `${t('works.deleteQuestion')} "${title}"?`,
             [
-                { text: 'Отмена', onPress: () => {} },
+                { text: t('works.cancel'), onPress: () => {} },
                 {
-                    text: 'Удалить',
+                    text: t('works.delete'),
                     onPress: async () => {
                         try {
                             await deleteWork(id).unwrap();
-                            Alert.alert('Успех', 'Работа удалена');
+                            Alert.alert(t('works.success'), t('works.deleted'));
                         } catch (error) {
-                            Alert.alert('Ошибка', 'Не удалось удалить работу');
+                            Alert.alert(t('common.error'), t('works.deleteError'));
                         }
                     },
                 },
@@ -126,17 +127,17 @@ export const WorkOvernightScreen = () => {
     const handleUpdateQuantity = async (rt: string, quantity: number) => {
         try {
             await updateQuantity({ rt, quantity }).unwrap();
-            Alert.alert('Успех', 'Количество обновлено');
+            Alert.alert(t('works.success'), t('works.quantityUpdated'));
         } catch (error) {
             console.error('Ошибка при обновлении количества:', error);
-            Alert.alert('Ошибка', 'Не удалось обновить количество');
+            Alert.alert(t('common.error'), t('works.updateQuantityError'));
         }
     };
 
     const errorMessage = error ? (
         ('status' in error ? error.status : 0) === 500
-            ? 'Ошибка сервера. Попробуйте позже.'
-            : `Ошибка: ${('data' in error ? (error.data as any)?.message : '') || 'Не удалось загрузить'}`
+            ? t('works.error')
+            : `${t('common.error')}: ${('data' in error ? (error.data as any)?.message : '') || t('works.notFound')}`
     ) : null;
 
     return (
@@ -145,159 +146,55 @@ export const WorkOvernightScreen = () => {
                 {isLoading ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color="#007AFF" />
-                        <Text style={styles.loadingText}>Загрузка работ...</Text>
+                        <Text style={styles.loadingText}>{t('works.loading')}</Text>
                     </View>
                 ) : (
                     <ScrollView contentContainerStyle={styles.scrollContainer}>
                         <View style={styles.container}>
-                            <Text style={styles.title}>Работы станка "{params.machineName}"</Text>
+                            <Text style={styles.title}>{t('works.title')} "{params.machineName}"</Text>
 
                             {errorMessage && (
                                 <View style={styles.errorBanner}>
                                     <Text style={styles.errorBannerText}>{errorMessage}</Text>
-                                    <Button title="Повторить" onPress={refetch} />
+                                    <Button title={t('tools.retry')} onPress={refetch} />
                                 </View>
                             )}
 
                             <View style={styles.filterButtons}>
                                 <Button
-                                    title={showArchived ? 'Архивированные' : 'Активные'}
+                                    title={showArchived ? t('works.archived') : t('works.active')}
                                     onPress={() => setShowArchived(!showArchived)}
                                     color={showArchived ? '#FF9500' : '#34C759'}
                                 />
                             </View>
-
                             {showAddModal && (
-                                <View style={styles.addModal}>
-                                    <Text style={styles.modalTitle}>Добавить работу</Text>
-                                    
-                                    <Controller
-                                        control={control}
-                                        name="name"
-                                        render={({ field: { value, onChange } }) => (
-                                            <TextInput
-                                                style={styles.input}
-                                                placeholder="Название работы"
-                                                value={value}
-                                                onChangeText={onChange}
-                                                editable={!isCreating}
-                                            />
-                                        )}
-                                    />
-
-                                    <Controller
-                                        control={control}
-                                        name="rt"
-                                        rules={{ required: 'RT код обязателен' }}
-                                        render={({ field: { value, onChange } }) => (
-                                            <>
-                                                <TextInput
-                                                    style={[styles.input, errors.rt && styles.inputError]}
-                                                    placeholder="RT код *"
-                                                    value={value}
-                                                    onChangeText={onChange}
-                                                    editable={!isCreating}
-                                                />
-                                                {errors.rt && (
-                                                    <Text style={styles.errorText}>{errors.rt.message}</Text>
-                                                )}
-                                            </>
-                                        )}
-                                    />
-
-                                    <Controller
-                                        control={control}
-                                        name="quantity"
-                                        render={({ field: { value, onChange } }) => (
-                                            <TextInput
-                                                style={styles.input}
-                                                placeholder="Количество деталей"
-                                                value={value}
-                                                onChangeText={onChange}
-                                                keyboardType="number-pad"
-                                                editable={!isCreating}
-                                            />
-                                        )}
-                                    />
-
-                                    <Controller
-                                        control={control}
-                                        name="madeBy"
-                                        render={({ field: { value, onChange } }) => (
-                                            <TextInput
-                                                style={styles.input}
-                                                placeholder="Кем изготовлено"
-                                                value={value}
-                                                onChangeText={onChange}
-                                                editable={!isCreating}
-                                            />
-                                        )}
-                                    />
-
-                                    <Controller
-                                        control={control}
-                                        name="completed"
-                                        render={({ field: { value, onChange } }) => (
-                                            <TextInput
-                                                style={styles.input}
-                                                placeholder="Изготовлено деталей"
-                                                value={value}
-                                                onChangeText={onChange}
-                                                keyboardType="number-pad"
-                                                editable={!isCreating}
-                                            />
-                                        )}
-                                    />
-
-                                    <Controller
-                                        control={control}
-                                        name="manufacturingTime"
-                                        render={({ field: { value, onChange } }) => (
-                                            <TextInput
-                                                style={styles.input}
-                                                placeholder="Время производства (например: 45 минут)"
-                                                value={value}
-                                                onChangeText={onChange}
-                                                editable={!isCreating}
-                                            />
-                                        )}
-                                    />
-
-                                    <View style={styles.modalButtons}>
-                                        <Button
-                                            title="Отмена"
-                                            onPress={() => {
-                                                setShowAddModal(false);
-                                                reset();
-                                            }}
-                                            disabled={isCreating}
-                                        />
-                                        <Button
-                                            title={isCreating ? 'Загрузка...' : 'Создать'}
-                                            onPress={handleSubmit(onSubmit)}
-                                            disabled={isCreating}
-                                        />
-                                    </View>
-                                </View>
+                                <AddWorkModal
+                                    visible={showAddModal}
+                                    onClose={() => {
+                                        setShowAddModal(false);
+                                        reset();
+                                    }}
+                                    onSubmit={onSubmit}
+                                    control={control}
+                                    handleSubmit={handleSubmit}
+                                    errors={errors}
+                                    isLoading={isCreating}
+                                />
                             )}
 
-                            <View style={styles.searchContainer}>
-                                <TextInput
-                                    style={styles.searchInput}
-                                    placeholder="Поиск по названию или RT"
-                                    value={searchQuery}
-                                    onChangeText={setSearchQuery}
-                                    clearButtonMode="while-editing"
-                                />
-                            </View>
+                            <SearchInput
+                                placeholder={t('works.search')}
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                            />
 
                             <View style={styles.worksList}>
                                 {filteredWorks.length > 0 ? (
                                     filteredWorks.map((work: WorkOvernight, index: number) => (
-                                        <View
+                                        <WorkCard
                                             key={work.id || index}
-                                            style={styles.workItem}
-                                            onTouchEnd={() => {
+                                            work={work}
+                                            onPress={() => {
                                                 navigation.navigate('WorkDetail', {
                                                     id: work.id,
                                                     name: work.title,
@@ -308,91 +205,14 @@ export const WorkOvernightScreen = () => {
                                                     manufacturingTime: '',
                                                 });
                                             }}
-                                        >
-                                            <View style={styles.workHeader}>
-                                                <View style={styles.workHeaderContent}>
-                                                    <Text style={styles.workTitle}>{work.title}</Text>
-                                                    <Text style={styles.workRt}>RT: {work.rt}</Text>
-                                                </View>
-                                                <View style={[
-                                                    styles.statusBadge,
-                                                    work.isArchived && styles.statusArchived,
-                                                ]}>
-                                                    <Text style={styles.statusText}>
-                                                        {work.isArchived ? 'Архив' : 'Активно'}
-                                                    </Text>
-                                                </View>
-                                            </View>
-
-                                            {work.description && (
-                                                <Text style={styles.workDescription}>
-                                                    {work.description}
-                                                </Text>
-                                            )}
-
-                                            <View style={styles.workInfo}>
-                                                <View style={styles.infoItem}>
-                                                    <Text style={styles.infoLabel}>Количество:</Text>
-                                                    <Text style={styles.infoValue}>{work.quantity}</Text>
-                                                </View>
-                                                <View style={styles.infoItem}>
-                                                    <Text style={styles.infoLabel}>Сделано:</Text>
-                                                    <Text style={styles.infoValue}>{work.completed}</Text>
-                                                </View>
-                                                {work.manufacturingTime && (
-                                                    <View style={styles.infoItem}>
-                                                        <Text style={styles.infoLabel}>Время производства:</Text>
-                                                        <Text style={styles.infoValue}>{work.manufacturingTime}</Text>
-                                                    </View>
-                                                )}
-                                                <View style={styles.infoItem}>
-                                                    <Text style={styles.infoLabel}>Создано:</Text>
-                                                    <Text style={styles.infoValue}>{new Date(work.createdAt).toLocaleDateString('ru-RU')}</Text>
-                                                </View>
-                                                <View style={styles.infoItem}>
-                                                    <Text style={styles.infoLabel}>Обновлено:</Text>
-                                                    <Text style={styles.infoValue}>{new Date(work.updatedAt).toLocaleDateString('ru-RU')}</Text>
-                                                </View>
-                                            </View>
-
-                                            <View style={styles.workQuantity}>
-                                                <Text style={styles.quantityLabel}>
-                                                    Управление количеством
-                                                </Text>
-                                                {!work.isArchived && !isAdmin && (
-                                                    <View style={styles.quantityButtons}>
-                                                        <Button
-                                                            title="-"
-                                                            onPress={() =>
-                                                                handleUpdateQuantity(work.rt, Math.max(0, work.quantity - 1))
-                                                            }
-                                                        />
-                                                        <Button
-                                                            title="+"
-                                                            onPress={() =>
-                                                                handleUpdateQuantity(work.rt, work.quantity + 1)
-                                                            }
-                                                        />
-                                                    </View>
-                                                )}
-                                            </View>
-
-                                            {isAdmin && (
-                                                <View style={styles.adminButtons}>
-                                                    <Button
-                                                        title="Удалить"
-                                                        color="#FF3B30"
-                                                        onPress={() =>
-                                                            handleDeleteWork(work.id, work.title)
-                                                        }
-                                                    />
-                                                </View>
-                                            )}
-                                        </View>
+                                            onDelete={isAdmin ? handleDeleteWork : undefined}
+                                            onUpdateQuantity={handleUpdateQuantity}
+                                            isAdmin={isAdmin}
+                                        />
                                     ))
                                 ) : (
                                     <Text style={styles.noResultsText}>
-                                        {allWorks.length === 0 ? 'Нет работ' : 'Работы не найдены'}
+                                        {allWorks.length === 0 ? t('works.noWorks') : t('works.notFound')}
                                     </Text>
                                 )}
                             </View>
@@ -401,12 +221,7 @@ export const WorkOvernightScreen = () => {
                 )}
             </SafeAreaView>
             {isAdmin && (
-                <TouchableOpacity 
-                    style={styles.floatingButton}
-                    onPress={() => setShowAddModal(true)}
-                >
-                    <Text style={styles.floatingButtonText}>+</Text>
-                </TouchableOpacity>
+                <AddButton onPress={() => setShowAddModal(true)} />
             )}
         </AppLayout>
     );
@@ -431,48 +246,6 @@ const styles = StyleSheet.create({
         color: '#333',
         textAlign: 'center',
     },
-    addModal: {
-        backgroundColor: '#f5f5f5',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#ddd',
-    },
-    modalTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 12,
-        color: '#333',
-    },
-    input: {
-        height: 40,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        backgroundColor: '#fff',
-        marginBottom: 8,
-    },
-    inputError: {
-        borderColor: '#FF3B30',
-        backgroundColor: '#ffebee',
-    },
-    errorText: {
-        color: '#FF3B30',
-        fontSize: 12,
-        marginBottom: 8,
-        marginLeft: 4,
-    },
-    multilineInput: {
-        height: 80,
-        textAlignVertical: 'top',
-    },
-    modalButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 8,
-    },
     filterButtons: {
         marginBottom: 16,
     },
@@ -489,103 +262,6 @@ const styles = StyleSheet.create({
     },
     worksList: {
         width: '100%',
-    },
-    workItem: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-    },
-    workHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 12,
-    },
-    workHeaderContent: {
-        flex: 1,
-        marginRight: 12,
-    },
-    workTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 4,
-    },
-    workRt: {
-        fontSize: 14,
-        color: '#666',
-    },
-    statusBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 16,
-        backgroundColor: '#34C759',
-    },
-    statusArchived: {
-        backgroundColor: '#FF9500',
-    },
-    statusText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    workDescription: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 12,
-        lineHeight: 20,
-    },
-    workInfo: {
-        backgroundColor: '#f9f9f9',
-        borderRadius: 8,
-        padding: 10,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: '#eee',
-    },
-    infoItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingVertical: 6,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
-    },
-    infoLabel: {
-        fontSize: 12,
-        color: '#666',
-        fontWeight: '500',
-    },
-    infoValue: {
-        fontSize: 12,
-        color: '#333',
-        fontWeight: '600',
-    },
-    workQuantity: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingBottom: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        marginBottom: 12,
-    },
-    quantityLabel: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#333',
-    },
-    quantityButtons: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    adminButtons: {
-        marginTop: 12,
     },
     noResultsText: {
         fontSize: 16,
@@ -617,26 +293,5 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlign: 'center',
         marginBottom: 10,
-    },
-    floatingButton: {
-        position: 'absolute',
-        bottom: 30,
-        right: 30,
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: '#007AFF',
-        justifyContent: 'center',
-        alignItems: 'center',
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-    },
-    floatingButtonText: {
-        fontSize: 32,
-        color: '#fff',
-        fontWeight: 'bold',
     },
 });

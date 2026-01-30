@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     ScrollView,
@@ -7,32 +7,59 @@ import {
     Text,
     Alert,
     StyleSheet,
+    Modal,
+    SafeAreaView,
 } from 'react-native';
-import { pickImageFromGallery, takePhoto } from '../../utils/imageUtils';
+import { pickImageFromGallery, takePhoto } from './imageUtils';
+import { ImageAnnotator } from './ImageAnnotator';
 
 interface ImagePickerComponentProps {
     images: string[];
     onImagesChange: (images: string[]) => void;
     maxImages?: number;
+    onClose?: () => void;
+    hideHeader?: boolean;
 }
 
 export const ImagePickerComponent: React.FC<ImagePickerComponentProps> = ({
     images,
     onImagesChange,
     maxImages = 10,
+    onClose,
+    hideHeader = true,
 }) => {
+    const [showAnnotator, setShowAnnotator] = useState(false);
+    const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
+
     const pickImage = async () => {
         const imageUri = await pickImageFromGallery();
-        if (imageUri && images.length < maxImages) {
-            onImagesChange([...images, imageUri]);
+        if (imageUri) {
+            setPendingImageUri(imageUri);
+            setShowAnnotator(true);
         }
     };
 
     const openCamera = async () => {
         const imageUri = await takePhoto();
-        if (imageUri && images.length < maxImages) {
-            onImagesChange([...images, imageUri]);
+        if (imageUri) {
+            setPendingImageUri(imageUri);
+            setShowAnnotator(true);
         }
+    };
+
+    const handleAnnotatorSave = (annotatedUri: string) => {
+        if (images.length < maxImages) {
+            onImagesChange([...images, annotatedUri]);
+        } else {
+            Alert.alert('Ошибка', `Максимум ${maxImages} изображений`);
+        }
+        setShowAnnotator(false);
+        setPendingImageUri(null);
+    };
+
+    const handleAnnotatorCancel = () => {
+        setShowAnnotator(false);
+        setPendingImageUri(null);
     };
 
     const handleImageSelection = () => {
@@ -41,8 +68,8 @@ export const ImagePickerComponent: React.FC<ImagePickerComponentProps> = ({
             return;
         }
         Alert.alert(
-            "Выберите источник",
-            "Откуда вы хотите взять изображение?",
+            "Выбрать источник",
+            "",
             [
                 {
                     text: "Отмена",
@@ -59,13 +86,23 @@ export const ImagePickerComponent: React.FC<ImagePickerComponentProps> = ({
             ]
         );
     };
-
     const removeImage = (index: number) => {
         onImagesChange(images.filter((_, i) => i !== index));
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
+            {!hideHeader && (
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>Добавить фото</Text>
+                    {onClose && (
+                        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                            <Text style={styles.closeButtonText}>✕</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            )}
+            
             <ScrollView horizontal style={styles.imagesPreview}>
                 {images.map((uri, index) => (
                     <View key={index} style={styles.imagePreviewContainer}>
@@ -88,19 +125,56 @@ export const ImagePickerComponent: React.FC<ImagePickerComponentProps> = ({
                 )}
             </ScrollView>
             <Text style={styles.imageCountText}>{images.length}/{maxImages} изображений</Text>
-        </View>
+
+            {/* Модальное окно с ImageAnnotator */}
+            <Modal visible={showAnnotator} animationType="slide">
+                {pendingImageUri && (
+                    <ImageAnnotator
+                        imageUri={pendingImageUri}
+                        onSave={handleAnnotatorSave}
+                        onCancel={handleAnnotatorCancel}
+                    />
+                )}
+            </Modal>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        width: '100%',
-        marginBottom: 10,
+        flex: 1,
+        backgroundColor: '#f5f5f5',
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
+    },
+    closeButton: {
+        padding: 8,
+    },
+    closeButtonText: {
+        fontSize: 24,
+        color: '#666',
+        fontWeight: 'bold',
     },
     imagesPreview: {
         flexDirection: 'row',
         marginBottom: 10,
         maxHeight: 100,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#fff',
     },
     imagePreviewContainer: {
         position: 'relative',

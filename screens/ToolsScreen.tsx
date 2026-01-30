@@ -1,15 +1,19 @@
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput } from "react-native"
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from "react-native"
+import { useTranslation } from "react-i18next";
 import { AppLayout } from "../Layout/AppLayout"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useGetToolsQuery, useAddToolMutation, useDeleteToolMutation } from "../store/api/toolsApi";
 import { useAppSelector } from "../hooks/reduxHooks";
+import { useSearchFilter } from "../hooks/useSearchFilter";
+import { AddButton } from "../components/Button/AddButton";
 import { ItemCard } from "../components/Card/ItemCard";
 import { AddItemModal, AddItemFormData } from "../components/Modal/AddItemModal";
-import { ItemDetailsModal, ItemDetails } from "../components/Modal/ItemDetailsModal";
-import { LoadingState, ErrorState } from "../components/States";
+import { ItemDetailsModal } from "../components/Modal/ItemDetailsModal";
+import { SearchInput } from "../components/Search/SearchInput";
 import { createFormDataFromItem, confirmDelete, handleApiCall } from "../utils/formUtils";
 import { getImageUrls, FileSource } from "../utils/imageUtils";
+import { translateServerArray } from "../utils/translatorUtils";
 
 
 type Tool = {
@@ -23,6 +27,7 @@ type Tool = {
 };
 
 export const ToolsScreen = () => {
+    const { t, i18n } = useTranslation();
     const [visible, setVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
@@ -32,60 +37,42 @@ export const ToolsScreen = () => {
     const auth = useAppSelector(state => state.auth);
     const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
 
-    const { data: tools = [], isLoading, error, refetch, isFetching } = useGetToolsQuery();
+    const { data: rawTools = [], isLoading, error, refetch, isFetching } = useGetToolsQuery();
     const [addTool, { isLoading: isAdding }] = useAddToolMutation();
     const [deleteTool] = useDeleteToolMutation();
 
-    console.log(tools);
-    if (error) {
-        console.log('ToolsScreen Error:', JSON.stringify(error));
-    }
 
-    const filteredTools = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return tools;
-        }
-        const lowercasedQuery = searchQuery.toLowerCase();
-        return tools.filter((tool: any) => 
-            tool.name.toLowerCase().includes(lowercasedQuery) || 
-            tool.tool_id.toLowerCase().includes(lowercasedQuery)
-        );
-    }, [tools, searchQuery]);
+    const [tools, setTools] = useState<any[]>([]);
+    useEffect(() => {
+        translateServerArray(rawTools, ['name', 'description']).then(setTools);
+    }, [rawTools, i18n.language]);
+
+    const filteredTools = useSearchFilter(tools, searchQuery, {
+        searchFields: ['name', 'tool_id'],
+    });
 
     const handleAddTool = async (data: AddItemFormData, images: string[]) => {
-        console.log('=== Добавление инструмента ===');
-        console.log('Данные формы:', data);
-        console.log('Изображения:', images);
-        
         const formData = createFormDataFromItem(data, images, {
             fieldMapping: { item_id: 'tool_id' }
         });
         
-        console.log('FormData создан');
-        
         await handleApiCall(
-            () => {
-                console.log('Отправка запроса на сервер...');
-                return addTool(formData).unwrap();
-            },
-            'Инструмент добавлен',
-            'Не удалось добавить инструмент',
-            () => {
-                console.log('Инструмент успешно добавлен!');
-                setVisible(false);
-            }
+            () => addTool(formData).unwrap(),
+            t('tools.added'),
+            t('tools.addError'),
+            () => setVisible(false)
         );
     };
 
     const handleDeleteTool = (id: string | number) => {
         confirmDelete(
-            'Удаление',
-            'Вы уверены, что хотите удалить этот инструмент?',
+            t('tools.deleteConfirm'),
+            t('tools.deleteQuestion'),
             async () => {
                 await handleApiCall(
                     () => deleteTool(String(id)).unwrap(),
-                    'Инструмент удален',
-                    'Не удалось удалить инструмент',
+                    t('tools.deleted'),
+                    t('tools.deleteError'),
                     () => {
                         setDetailsModalVisible(false);
                         setSelectedTool(null);
@@ -112,7 +99,7 @@ export const ToolsScreen = () => {
             <SafeAreaView style={styles.safeArea}>
                 {isLoading ? (
                     <View style={styles.loadingContainer}>
-                        <Text>Загрузка инструментов...</Text>
+                        <Text>{t('tools.loading')}</Text>
                     </View>
                 ) : (
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -122,7 +109,7 @@ export const ToolsScreen = () => {
                             <View style={styles.errorBanner}>
                                 <Text style={styles.errorBannerText}>{errorMessage}</Text>
                                 <TouchableOpacity onPress={refetch}>
-                                    <Text style={styles.retryButtonText}>Повторить</Text>
+                                    <Text style={styles.retryButtonText}>{t('tools.retry')}</Text>
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -132,10 +119,10 @@ export const ToolsScreen = () => {
                             onClose={() => setVisible(false)}
                             onSubmit={handleAddTool}
                             isLoading={isAdding}
-                            title="Добавление инструмента"
+                            title={t('tools.addTitle')}
                             fields={{
-                                name: { placeholder: 'Название инструмента *' },
-                                item_id: { placeholder: 'ID инструмента *' },
+                                name: { placeholder: t('tools.name') },
+                                item_id: { placeholder: t('tools.toolId') },
                             }}
                             maxImages={10}
                         />
@@ -152,28 +139,24 @@ export const ToolsScreen = () => {
                                 subtitle: `ID: ${selectedTool.tool_id}`,
                                 images: getImageUrls(selectedTool.files, auth?.accessToken),
                                 fields: [
-                                    { label: 'Описание', value: selectedTool.description },
-                                    { label: 'Размер', value: selectedTool.size },
-                                    { label: 'Тип', value: selectedTool.type },
+                                    { label: t('tools.description'), value: selectedTool.description },
+                                    { label: t('tools.size'), value: selectedTool.size },
+                                    { label: t('tools.type'), value: selectedTool.type },
                                 ],
                             } : null}
-                            title="Детали инструмента"
+                            title={t('tools.details')}
                             onDelete={handleDeleteTool}
                             showDeleteButton={isAdmin}
                         />
 
                         <View style={styles.toolsContainer}>
-                            <Text style={styles.title}>Список инструментов</Text>
+                            <Text style={styles.title}>{t('tools.title')}</Text>
                             
-                            <View style={styles.searchContainer}>
-                                <TextInput
-                                    style={styles.searchInput}
-                                    placeholder="Поиск по названию или ID"
-                                    value={searchQuery}
-                                    onChangeText={setSearchQuery}
-                                    clearButtonMode="while-editing"
-                                />
-                            </View>
+                            <SearchInput
+                                placeholder={t('tools.search')}
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                            />
                             
                             <View style={styles.toolsList}>
                                 {filteredTools.length > 0 ? (
@@ -196,7 +179,7 @@ export const ToolsScreen = () => {
                                     ))
                                 ) : (
                                     <Text style={styles.noResultsText}>
-                                        {tools.length === 0 ? "Нет инструментов" : "Инструменты не найдены"}
+                                        {tools.length === 0 ? t('tools.noTools') : t('tools.notFound')}
                                     </Text>
                                 )}
                             </View>
@@ -206,12 +189,7 @@ export const ToolsScreen = () => {
                 )}
                 
                 {isAdmin && (
-                    <TouchableOpacity
-                        style={styles.fab}
-                        onPress={() => setVisible(true)}
-                    >
-                        <Text style={styles.fabText}>+</Text>
-                    </TouchableOpacity>
+                    <AddButton onPress={() => setVisible(true)} />
                 )}
             </SafeAreaView>
         </AppLayout>

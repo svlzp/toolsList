@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BuyProductCard, ReceiveOrderCard, RepairDeviceCard, ViewIconCard } from '../components/Card/PredefinedCards';
 import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +31,7 @@ export type RootStackParamList = {
 
 
 export function HomeScreen({ navigation }: { navigation: any }) {
+  const { t } = useTranslation();
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [buttonOpacity] = useState(new Animated.Value(0));
   const [orientation, setOrientation] = useState(getOrientation());
@@ -53,7 +55,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
         <ScrollView contentContainerStyle={styles.scrollContainer} onLayout={handleLayoutChange}>
           <View style={styles.container}>
             <View style={styles.textContainer}>
-              <Text style={styles.title}>Добро пожаловать!👋</Text>
+              <Text style={styles.title}>{t('home.welcome')}</Text>
             </View>
             <View style={[styles.containerCard]}>
               <View style={styles.cardItem}>

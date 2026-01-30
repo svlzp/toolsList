@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Button, Alert, ActivityIndicator, ScrollView, TextInput, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, Button, Alert, ActivityIndicator, ScrollView, TextInput, TouchableOpacity, Image, Modal } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import * as ImagePicker from 'expo-image-picker';
 import { AppLayout } from '../Layout/AppLayout';
 import { useUpdateQuantityByRtMutation, useGetStagesByWorkIdQuery, useCreateStageMutation } from '../store/api/workOvernightApi';
 import { useAppSelector } from '../hooks/reduxHooks';
 import { PredefinedButton } from '@/components/Button/PredefinedButton';
+import { ImagePickerComponent } from '../utils/ImagePickerComponent';
 
 interface RouteParams {
     id: number;
@@ -25,6 +26,7 @@ interface StageBlock {
 }
 
 export const WorkDetailScreen = () => {
+    const { t } = useTranslation();
     const route = useRoute();
     const navigation = useNavigation<any>();
     const work = route.params as RouteParams;
@@ -39,28 +41,21 @@ export const WorkDetailScreen = () => {
     
     const [isAddingStages, setIsAddingStages] = useState(false);
     const [stageBlocks, setStageBlocks] = useState<StageBlock[]>([]);
+    const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
 
     const pickImages = async (blockIndex: number) => {
-        try {
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ['images'],
-                allowsMultipleSelection: true,
-                aspect: [4, 3],
-                quality: 1,
-            });
+        setSelectedBlockIndex(blockIndex);
+    };
 
-            if (!result.canceled) {
-                const newImages = result.assets.map((asset) => asset.uri);
-                const updated = [...stageBlocks];
-                updated[blockIndex].selectedImages = [
-                    ...updated[blockIndex].selectedImages,
-                    ...newImages,
-                ];
-                setStageBlocks(updated);
-            }
-        } catch (err) {
-            console.error('Ошибка при выборе изображения:', err);
-            Alert.alert('Ошибка', 'Не удалось выбрать изображение');
+    const handleImagesSelected = (images: string[]) => {
+        if (selectedBlockIndex !== null) {
+            const updated = [...stageBlocks];
+            updated[selectedBlockIndex].selectedImages = [
+                ...updated[selectedBlockIndex].selectedImages,
+                ...images,
+            ];
+            setStageBlocks(updated);
+            setSelectedBlockIndex(null);
         }
     };
 
@@ -89,7 +84,7 @@ export const WorkDetailScreen = () => {
 
     const handleSaveStages = async () => {
         if (stageBlocks.length === 0) {
-            Alert.alert('Ошибка', 'Добавьте хотя бы один блок');
+            Alert.alert(t('common.error'), t('works.addBlock'));
             return;
         }
 
@@ -123,15 +118,15 @@ export const WorkDetailScreen = () => {
             setStageBlocks([]);
             setIsAddingStages(false);
             refetchStages();
-            Alert.alert('Успех', 'Особенности установки добавлены');
+            Alert.alert(t('works.success'), t('works.stagesAdded'));
         } catch (error) {
             console.error('Ошибка при сохранении особенностей:', error);
-            Alert.alert('Ошибка', 'Не удалось сохранить особенности установки');
+            Alert.alert(t('common.error'), t('works.stagesSaveError'));
         }
     };
 
     const handleIncrement = () => {
-        // Увеличиваем количество выполненных деталей
+       
         if (completed < work.quantity) {
             setCompleted(prev => prev + 1);
         }
@@ -145,23 +140,23 @@ export const WorkDetailScreen = () => {
 
     const handleConfirm = async () => {
         Alert.alert(
-            'Подтверждение',
-            `Выполнено деталей: ${completed} из ${work.quantity}\n\nОбновить прогресс?`,
+            t('works.confirm'),
+            `${t('works.completed')}: ${completed} ${t('works.from')} ${work.quantity}\n\n${t('works.updateProgress')}?`,
             [
-                { text: 'Отмена', onPress: () => {} },
+                { text: t('common.cancel'), onPress: () => {} },
                 {
-                    text: 'Подтвердить',
+                    text: t('works.confirm'),
                     onPress: async () => {
                         try {
                             await updateQuantity({
                                 rt: work.rt,
                                 completed: completed,
                             }).unwrap();
-                            Alert.alert('Успех', 'Прогресс обновлен');
+                            Alert.alert(t('works.success'), t('works.progressUpdated'));
                             navigation.goBack();
                         } catch (error) {
                             console.error('Ошибка при обновлении:', error);
-                            Alert.alert('Ошибка', 'Не удалось обновить прогресс');
+                            Alert.alert(t('common.error'), t('works.updateError'));
                         }
                     },
                 },
@@ -178,41 +173,41 @@ export const WorkDetailScreen = () => {
             <SafeAreaView style={styles.safeArea}>
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
                     <View style={styles.container}>
-                        <Button title="← Назад" onPress={() => navigation.goBack()} />
+                        <Button title={`← ${t('common.back')}`} onPress={() => navigation.goBack()} />
 
                         <View style={styles.header}>
-                            <Text style={styles.title}>{work.name || 'Работа'}</Text>
+                            <Text style={styles.title}>{work.name || t('works.work')}</Text>
                             <View style={styles.rtBadge}>
                                 <Text style={styles.rtText}>RT: {work.rt}</Text>
                             </View>
                         </View>
 
                         <View style={styles.card}>
-                            <Text style={styles.cardTitle}>Информация о работе</Text>
+                            <Text style={styles.cardTitle}>{t('works.workInfo')}</Text>
 
                             {work.madeBy && (
                                 <View style={styles.infoRow}>
-                                    <Text style={styles.label}>Изготовлено кем:</Text>
+                                    <Text style={styles.label}>{t('works.madeBy')}:</Text>
                                     <Text style={styles.value}>{work.madeBy}</Text>
                                 </View>
                             )}
 
                             {work.manufacturingTime && (
                                 <View style={styles.infoRow}>
-                                    <Text style={styles.label}>Время производства:</Text>
+                                    <Text style={styles.label}>{t('works.manufacturingTime')}:</Text>
                                     <Text style={styles.value}>{work.manufacturingTime}</Text>
                                 </View>
                             )}
 
                             <View style={styles.infoRow}>
-                                <Text style={styles.label}>Всего деталей:</Text>
+                                <Text style={styles.label}>{t('works.totalParts')}:</Text>
                                 <Text style={styles.value}>{work.quantity}</Text>
                             </View>
                         </View>
 
                         {stagesList && stagesList.length > 0 && user?.role?.toUpperCase() === 'ADMIN' && (
                             <View style={styles.card}>
-                                <Text style={styles.cardTitle}>Особенности установки</Text>
+                                <Text style={styles.cardTitle}>{t('works.setupFeatures')}</Text>
                                 {isLoadingStages ? (
                                     <ActivityIndicator size="small" color="#007AFF" />
                                 ) : (
@@ -223,30 +218,31 @@ export const WorkDetailScreen = () => {
                                                 <Text style={styles.stageText}>{stage}</Text>
                                             </View>
                                         ))}
-                                        {user?.role?.toUpperCase() === 'ADMIN' && (
-                                            <TouchableOpacity 
-                                                style={styles.addStageButton}
-                                                onPress={() => setIsAddingStages(!isAddingStages)}
-                                            >
-                                                <Text style={styles.addStageButtonText}>
-                                                    {isAddingStages ? 'Скрыть' : '+ Добавить новое описание'}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        )}
                                     </>
                                 )}
                             </View>
                         )}
 
+                        {user?.role?.toUpperCase() === 'ADMIN' && (
+                            <TouchableOpacity 
+                                style={styles.floatingAddButton}
+                                onPress={() => setIsAddingStages(!isAddingStages)}
+                            >
+                                <Text style={styles.floatingAddButtonText}>
+                                    {isAddingStages ? t('common.hide') : `+ ${t('works.addDescription')}`}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+
                         {isAddingStages && user?.role?.toUpperCase() === 'ADMIN' && (
                             <View style={styles.addStagesForm}>
-                                <Text style={styles.formTitle}>Добавить особенности установки</Text>
+                                <Text style={styles.formTitle}>{t('works.addSetupFeatures')}</Text>
                                 
                                 {stageBlocks.length > 0 ? (
                                     stageBlocks.map((block, blockIndex) => (
                                         <View key={blockIndex} style={styles.stageBlockForm}>
                                             <View style={styles.blockHeader}>
-                                                <Text style={styles.blockTitle}>Блок {blockIndex + 1}</Text>
+                                                <Text style={styles.blockTitle}>{t('works.block')} {blockIndex + 1}</Text>
                                                 <TouchableOpacity onPress={() => removeStageBlock(blockIndex)}>
                                                     <Text style={styles.removeBlockText}>✕</Text>
                                                 </TouchableOpacity>
@@ -254,7 +250,7 @@ export const WorkDetailScreen = () => {
 
                                             <TextInput
                                                 style={styles.descriptionInput}
-                                                placeholder="Описание особенности установки"
+                                                placeholder={t('works.featureDescription')}
                                                 value={block.description}
                                                 onChangeText={(text) => {
                                                     const updated = [...stageBlocks];
@@ -269,7 +265,7 @@ export const WorkDetailScreen = () => {
                                                 style={styles.pickButton}
                                                 onPress={() => pickImages(blockIndex)}
                                             >
-                                                <Text style={styles.pickButtonText}>Добавить изображения</Text>
+                                                <Text style={styles.pickButtonText}>{t('learning.addImages')}</Text>
                                             </TouchableOpacity>
 
                                             {block.selectedImages.length > 0 && (
@@ -293,19 +289,19 @@ export const WorkDetailScreen = () => {
                                         </View>
                                     ))
                                 ) : (
-                                    <Text style={styles.noBlocksText}>Нет блоков. Добавьте первый блок ниже.</Text>
+                                    <Text style={styles.noBlocksText}>{t('works.noBlocks')}</Text>
                                 )}
 
                                 <TouchableOpacity 
                                     style={styles.addBlockButton}
                                     onPress={addStageBlock}
                                 >
-                                    <Text style={styles.addBlockButtonText}>+ Добавить блок</Text>
+                                    <Text style={styles.addBlockButtonText}>+ {t('works.addBlock')}</Text>
                                 </TouchableOpacity>
 
                                 <View style={styles.formButtons}>
                                     <Button 
-                                        title="Отмена" 
+                                        title={t('common.cancel')} 
                                         onPress={() => {
                                             setIsAddingStages(false);
                                             setStageBlocks([]);
@@ -313,7 +309,7 @@ export const WorkDetailScreen = () => {
                                         disabled={isSavingStages}
                                     />
                                     <Button 
-                                        title={isSavingStages ? 'Сохранение...' : 'Сохранить'} 
+                                        title={isSavingStages ? t('common.saving') : t('common.save')} 
                                         onPress={handleSaveStages}
                                         disabled={isSavingStages}
                                     />
@@ -322,7 +318,7 @@ export const WorkDetailScreen = () => {
                         )}
 
                         <View style={styles.card}>
-                            <Text style={styles.cardTitle}>Прогресс</Text>
+                            <Text style={styles.cardTitle}>{t('works.progress')}</Text>
 
                             <View style={styles.progressContainer}>
                                 <View style={styles.progressBar}>
@@ -340,20 +336,20 @@ export const WorkDetailScreen = () => {
 
                             <View style={styles.statsRow}>
                                 <View style={styles.stat}>
-                                    <Text style={styles.statLabel}>Выполнено</Text>
+                                    <Text style={styles.statLabel}>{t('works.completed')}</Text>
                                     <Text style={styles.statValue}>{completed}</Text>
                                 </View>
                                 <View style={styles.stat}>
-                                    <Text style={styles.statLabel}>Осталось</Text>
+                                    <Text style={styles.statLabel}>{t('works.remaining')}</Text>
                                     <Text style={styles.statValue}>{remaining}</Text>
                                 </View>
                             </View>
                         </View>
 
                         <View style={styles.card}>
-                            <Text style={styles.cardTitle}>Обновить прогресс</Text>
+                            <Text style={styles.cardTitle}>{t('works.updateProgress')}</Text>
                             <Text style={styles.description}>
-                                Выполнено: {completed} из {work.quantity} деталей
+                                {t('works.completed')}: {completed} {t('works.from')} {work.quantity} {t('works.parts')}
                             </Text>
 
                             <View style={styles.quantityControl}>
@@ -365,7 +361,7 @@ export const WorkDetailScreen = () => {
                                 />
                                 <View style={styles.quantityDisplay}>
                                     <Text style={styles.quantityValue}>{completed}</Text>
-                                    <Text style={styles.quantityLabel}>выполнено</Text>
+                                    <Text style={styles.quantityLabel}>{t('works.done')}</Text>
                                 </View>
                                 <Button
                                     title="+"
@@ -376,11 +372,11 @@ export const WorkDetailScreen = () => {
                             </View>
 
                             <Text style={styles.note}>
-                                Нажимайте "+" чтобы отметить выполненные детали
+                                {t('works.incrementNote')}
                             </Text>
 
                             <PredefinedButton
-                                label={isLoading ? 'Загрузка...' : 'Подтвердить обновление'}
+                                label={isLoading ? t('common.loading') : t('works.confirmUpdate')}
                                 onPress={handleConfirm}
                                 disabled={isLoading || completed === work.completed}
                                 type='green'
@@ -389,6 +385,28 @@ export const WorkDetailScreen = () => {
                     </View>
                 </ScrollView>
             </SafeAreaView>
+
+          
+            <Modal visible={selectedBlockIndex !== null} animationType="slide">
+                {selectedBlockIndex !== null && (
+                    <SafeAreaView style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <TouchableOpacity onPress={() => setSelectedBlockIndex(null)}>
+                                <Text style={styles.modalCloseButton}>✕</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.modalTitle}>{t('learning.addImages')}</Text>
+                            <View style={{ width: 40 }} />
+                        </View>
+                        <ImagePickerComponent 
+                            images={stageBlocks[selectedBlockIndex]?.selectedImages || []}
+                            onImagesChange={handleImagesSelected}
+                            maxImages={10}
+                            onClose={() => setSelectedBlockIndex(null)}
+                            hideHeader={true}
+                        />
+                    </SafeAreaView>
+                )}
+            </Modal>
         </AppLayout>
     );
 };
@@ -678,5 +696,50 @@ const styles = StyleSheet.create({
     formButtons: {
         flexDirection: 'row',
         gap: 8,
+    },
+    floatingAddButton: {
+        backgroundColor: '#007AFF',
+        borderRadius: 50,
+        paddingHorizontal: 24,
+        paddingVertical: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+    },
+    floatingAddButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    modalContainer: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+        backgroundColor: '#fff',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
+    },
+    modalCloseButton: {
+        fontSize: 28,
+        color: '#666',
+        fontWeight: 'bold',
+        width: 40,
+        textAlign: 'center',
     },
 });

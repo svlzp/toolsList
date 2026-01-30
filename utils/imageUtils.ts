@@ -1,6 +1,9 @@
 import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
+export { ImageAnnotator } from './ImageAnnotator';
+export type { DrawingPath } from './ImageAnnotator';
+
 
 export const requestMediaLibraryPermissions = async (): Promise<boolean> => {
   try {
@@ -63,9 +66,9 @@ export const pickImageFromGallery = async (): Promise<string | null> => {
     if (!hasPermission) return null;
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
-      aspect: [4, 3],
+      aspect: undefined, 
       quality: 0.7,
     });
 
@@ -86,9 +89,9 @@ export const takePhoto = async (): Promise<string | null> => {
     if (!hasPermission) return null;
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
-      aspect: [4, 3],
+      aspect: undefined, 
       quality: 0.7,
     });
 
@@ -145,10 +148,6 @@ export const getImageUrls = (
        
         url = url.replace(/\\/g, '/');
         
-      
-        if (!/^https?:\/\//.test(url)) {
-            url = 'http://10.100.102.3:4000/' + (url.startsWith('/') ? url.slice(1) : url);
-        }
         
        
         if (token && !url.includes('?')) {

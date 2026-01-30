@@ -4,14 +4,13 @@ import {
     Text,
     StyleSheet,
     ScrollView,
-    Button,
     Alert,
     TextInput,
     Image,
     TouchableOpacity,
     ActivityIndicator,
-    Modal,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     useGetLearningByIdQuery,
@@ -21,8 +20,7 @@ import {
     useDeleteContentMutation,
 } from '../store/api/learningApi';
 import { useAppSelector } from '../hooks/reduxHooks';
-import { getImageUrls } from '../utils/imageUtils';
-import * as ImagePicker from 'expo-image-picker';
+import { MaterialImagePickerModal } from '../components/Modal/MaterialImagePickerModal';
 
 interface MaterialBlock {
     isNew: boolean;
@@ -32,6 +30,7 @@ interface MaterialBlock {
 }
 
 export const LearningEditorScreen = ({ route, navigation }: any) => {
+    const { t } = useTranslation();
     const { learningId } = route.params;
     const auth = useAppSelector(state => state.auth);
 
@@ -50,7 +49,7 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
     React.useEffect(() => {
         if (learning) {
             setLearningTitle(learning.title);
-            // Инициализируем существующие блоки контента
+           
             if (learning.content && learning.content.length > 0) {
                 setMaterialBlocks(
                     learning.content.map((content: any) => ({
@@ -65,25 +64,8 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
     }, [learning]);
 
     const pickImages = async (blockIndex: number) => {
-        try {
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ['images'],
-                allowsMultipleSelection: true,
-                quality: 1,
-            });
-
-            if (!result.canceled) {
-                const newImages = result.assets.map((asset) => asset.uri);
-                const updated = [...materialBlocks];
-                updated[blockIndex].selectedImages = [
-                    ...updated[blockIndex].selectedImages,
-                    ...newImages,
-                ];
-                setMaterialBlocks(updated);
-            }
-        } catch (err) {
-            Alert.alert('Ошибка', 'Не удалось выбрать изображения');
-        }
+        setSelectedBlockForImages(blockIndex);
+        setShowImagePicker(true);
     };
 
     const addMaterialBlock = () => {
@@ -103,12 +85,12 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
         
         if (!block.isNew && block.id) {
             Alert.alert(
-                'Удаление',
-                'Вы уверены?',
+                t('learning.deleteConfirm'),
+                t('learning.deleteQuestion'),
                 [
-                    { text: 'Отмена' },
+                    { text: t('common.cancel') },
                     {
-                        text: 'Удалить',
+                        text: t('common.delete'),
                         onPress: async () => {
                             try {
                                 await deleteContent({
@@ -118,7 +100,7 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
                                 const updated = materialBlocks.filter((_, i) => i !== index);
                                 setMaterialBlocks(updated);
                             } catch (error) {
-                                Alert.alert('Ошибка', 'Не удалось удалить материал');
+                                Alert.alert(t('common.error'), t('learning.deleteError'));
                             }
                         },
                     },
@@ -140,7 +122,7 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
 
     const updateLearningTitle = async () => {
         if (!learningTitle.trim()) {
-            Alert.alert('Ошибка', 'Название не может быть пустым');
+            Alert.alert(t('common.error'), t('learning.titleEmpty'));
             return;
         }
 
@@ -149,9 +131,9 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
                 id: learningId,
                 dto: { title: learningTitle },
             }).unwrap();
-            Alert.alert('Успех', 'Название обновлено');
+            Alert.alert(t('learning.success'), t('learning.titleUpdated'));
         } catch (error) {
-            Alert.alert('Ошибка', 'Не удалось обновить название');
+            Alert.alert(t('common.error'), t('learning.updateError'));
         }
     };
 
@@ -163,7 +145,7 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
                 }
 
                 if (block.isNew) {
-                    // Новый блок - создаём контент
+                   
                     const formData = new FormData();
                     formData.append('description', block.description);
                     
@@ -180,13 +162,13 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
                         formData,
                     }).unwrap();
                 } else if (block.id) {
-                    // Существующий блок - обновляем контент
+                    
                     const formData = new FormData();
                     formData.append('description', block.description);
                     
                     block.selectedImages.forEach((image, imgIndex) => {
-                        // Только новые изображения (которые начинаются с file://)
-                        if (image.startsWith('file://') || !image.includes('10.100.102.3')) {
+                       
+                        if (image.startsWith('file://') ) {
                             formData.append('files', {
                                 uri: image,
                                 name: `image_${Date.now()}_${imgIndex}.jpg`,
@@ -204,10 +186,10 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
             }
 
             refetch();
-            Alert.alert('Успех', 'Все материалы сохранены');
+            Alert.alert(t('learning.success'), t('learning.materialsSaved'));
         } catch (error) {
             console.error('Ошибка при сохранении:', error);
-            Alert.alert('Ошибка', 'Не удалось сохранить материалы');
+            Alert.alert(t('common.error'), t('learning.saveError'));
         }
     };
 
@@ -223,14 +205,14 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.container}>
-                    {/* Редактирование названия */}
+                  
                     <View style={styles.titleSection}>
-                        <Text style={styles.label}>Название урока:</Text>
+                        <Text style={styles.label}>{t('learning.lessonTitle')}:</Text>
                         <TextInput
                             style={styles.titleInput}
                             value={learningTitle}
                             onChangeText={setLearningTitle}
-                            placeholder="Введите название урока"
+                            placeholder={t('learning.enterTitle')}
                         />
                         <TouchableOpacity
                             style={styles.saveButton}
@@ -240,20 +222,20 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
                             {isUpdatingLearning ? (
                                 <ActivityIndicator color="#fff" />
                             ) : (
-                                <Text style={styles.saveButtonText}>Сохранить название</Text>
+                                <Text style={styles.saveButtonText}>{t('learning.saveTitle')}</Text>
                             )}
                         </TouchableOpacity>
                     </View>
 
-                    {/* Материалы */}
+                   
                     <View style={styles.materialsSection}>
                         <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>Материалы</Text>
+                            <Text style={styles.sectionTitle}>{t('learning.materials')}</Text>
                             <TouchableOpacity
                                 style={styles.addBlockButton}
                                 onPress={addMaterialBlock}
                             >
-                                <Text style={styles.addBlockButtonText}>+ Блок</Text>
+                                <Text style={styles.addBlockButtonText}>+ {t('learning.block')}</Text>
                             </TouchableOpacity>
                         </View>
 
@@ -261,7 +243,7 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
                             materialBlocks.map((block, index) => (
                                 <View key={index} style={styles.materialBlock}>
                                     <View style={styles.blockHeader}>
-                                        <Text style={styles.blockNumber}>Материал #{index + 1}</Text>
+                                        <Text style={styles.blockNumber}>{t('learning.material')} #{index + 1}</Text>
                                         <TouchableOpacity
                                             onPress={() => removeMaterialBlock(index)}
                                             style={styles.removeBlockButton}
@@ -270,10 +252,10 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
                                         </TouchableOpacity>
                                     </View>
 
-                                    {/* Описание */}
+                               
                                     <TextInput
                                         style={styles.descriptionInput}
-                                        placeholder="Описание материала"
+                                        placeholder={t('learning.description')}
                                         value={block.description}
                                         onChangeText={(text) => {
                                             const updated = [...materialBlocks];
@@ -284,12 +266,12 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
                                         numberOfLines={3}
                                     />
 
-                                    {/* Изображения */}
+                                
                                     <TouchableOpacity
                                         style={styles.pickButton}
                                         onPress={() => pickImages(index)}
                                     >
-                                        <Text style={styles.pickButtonText}>Добавить изображения</Text>
+                                        <Text style={styles.pickButtonText}>{t('learning.addImages')}</Text>
                                     </TouchableOpacity>
 
                                     {block.selectedImages.length > 0 && (
@@ -313,28 +295,43 @@ export const LearningEditorScreen = ({ route, navigation }: any) => {
                                 </View>
                             ))
                         ) : (
-                            <Text style={styles.noBlocksText}>Нет материалов. Добавьте первый блок</Text>
+                            <Text style={styles.noBlocksText}>{t('learning.noMaterialsAdded')}</Text>
                         )}
                     </View>
 
-                    {/* Кнопки действий */}
                     <View style={styles.actionButtons}>
                         <TouchableOpacity
                             style={[styles.actionButton, styles.saveAllButton]}
                             onPress={saveMaterialBlocks}
                         >
-                            <Text style={styles.actionButtonText}>Сохранить все материалы</Text>
+                            <Text style={styles.actionButtonText}>{t('learning.saveAllMaterials')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
                             style={[styles.actionButton, styles.backButton]}
                             onPress={() => navigation.goBack()}
                         >
-                            <Text style={styles.actionButtonText}>Назад</Text>
+                            <Text style={styles.actionButtonText}>{t('common.back')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </ScrollView>
+
+            <MaterialImagePickerModal
+                visible={showImagePicker}
+                selectedImages={selectedBlockForImages !== null ? materialBlocks[selectedBlockForImages]?.selectedImages || [] : []}
+                onImagesChange={(images) => {
+                    if (selectedBlockForImages !== null) {
+                        const updated = [...materialBlocks];
+                        updated[selectedBlockForImages].selectedImages = images;
+                        setMaterialBlocks(updated);
+                    }
+                }}
+                onClose={() => {
+                    setShowImagePicker(false);
+                    setSelectedBlockForImages(null);
+                }}
+            />
         </SafeAreaView>
     );
 };

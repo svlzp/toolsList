@@ -1,15 +1,21 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { AppLayout } from '../Layout/AppLayout';
 import { useGetAllMachinesQuery, useCreateMachineMutation, useDeleteMachineMutation } from '../store/api/machineCncApi';
 import { useAppSelector } from '../hooks/reduxHooks';
+import { useSearchFilter } from '../hooks/useSearchFilter';
+import { AddButton } from '../components/Button/AddButton';
 import { ItemCard } from '../components/Card/ItemCard';
 import { AddMachineModal } from '../components/Modal/AddMachineModal';
+import { SearchInput } from '../components/Search/SearchInput';
 import { getImageUrls } from '../utils/imageUtils';
+import { translateServerObject, translateServerArray } from '../utils/translatorUtils';
 import { useNavigation } from '@react-navigation/native';
 
 export const MachineCncScreen = () => {
+    const { t, i18n } = useTranslation();
     const navigation = useNavigation<any>();
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
@@ -18,28 +24,19 @@ export const MachineCncScreen = () => {
     const auth = useAppSelector(state => state.auth);
     const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
 
-    const { data: machines = [], isLoading, error, refetch } = useGetAllMachinesQuery();
+    const { data: rawMachines = [], isLoading, error, refetch } = useGetAllMachinesQuery();
     const [createMachine, { isLoading: isCreating }] = useCreateMachineMutation();
     const [deleteMachine] = useDeleteMachineMutation();
-    console.log('Machines:', machines);
 
-    // Debug логирование
+ 
+    const [machines, setMachines] = useState<any[]>([]);
     useEffect(() => {
-        if (machines.length > 0) {
-            console.log('Machines loaded:', machines.length);
-        }
-    }, [machines]);
+        translateServerArray(rawMachines, ['name', 'description']).then(setMachines);
+    }, [rawMachines, i18n.language]);
 
-    const filteredMachines = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return machines;
-        }
-        const lowercasedQuery = searchQuery.toLowerCase();
-        return machines.filter((machine: any) =>
-            machine.name.toLowerCase().includes(lowercasedQuery) ||
-            (machine.description?.toLowerCase().includes(lowercasedQuery) ?? false)
-        );
-    }, [machines, searchQuery]);
+    const filteredMachines = useSearchFilter(machines, searchQuery, {
+        searchFields: ['name', 'description'],
+    });
 
     const handleAddMachine = async (data: {
         name: string;
@@ -61,28 +58,28 @@ export const MachineCncScreen = () => {
                 files: files.length > 0 ? files : undefined,
             }).unwrap();
 
-            Alert.alert('Успех', 'Станок добавлен');
+            Alert.alert(t('machines.success'), t('machines.added'));
         } catch (error) {
             console.error('Ошибка при добавлении станка:', error);
-            Alert.alert('Ошибка', 'Не удалось добавить станок');
+            Alert.alert(t('common.error'), t('machines.addError'));
         }
     };
 
     const handleDeleteMachine = (id: number | string, name?: string) => {
         const machineName = name || 'станок';
         Alert.alert(
-            'Удаление',
-            `Вы уверены, что хотите удалить ${machineName}?`,
+            t('machines.deleteConfirm'),
+            `${t('machines.deleteQuestion')} ${machineName}?`,
             [
-                { text: 'Отмена', onPress: () => {} },
+                { text: t('machines.cancel'), onPress: () => {} },
                 {
-                    text: 'Удалить',
+                    text: t('machines.delete'),
                     onPress: async () => {
                         try {
                             await deleteMachine(Number(id)).unwrap();
-                            Alert.alert('Успех', 'Станок удалён');
+                            Alert.alert(t('machines.success'), t('machines.deleted'));
                         } catch (error) {
-                            Alert.alert('Ошибка', 'Не удалось удалить станок');
+                            Alert.alert(t('common.error'), t('machines.deleteError'));
                         }
                     },
                 },
@@ -92,8 +89,8 @@ export const MachineCncScreen = () => {
 
     const errorMessage = error ? (
         ('status' in error ? error.status : 0) === 500
-            ? 'Ошибка сервера. Попробуйте позже.'
-            : `Ошибка: ${('data' in error ? (error.data as any)?.message : '') || 'Не удалось загрузить'}`
+            ? t('machines.error')
+            : `${t('common.error')}: ${('data' in error ? (error.data as any)?.message : '') || t('machines.notFound')}`
     ) : null;
 
     return (
@@ -102,22 +99,21 @@ export const MachineCncScreen = () => {
                 {isLoading ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color="#007AFF" />
-                        <Text style={styles.loadingText}>Загрузка станков...</Text>
+                        <Text style={styles.loadingText}>{t('machines.loading')}</Text>
                     </View>
                 ) : (
                     <ScrollView contentContainerStyle={styles.scrollContainer}>
                         <View style={styles.container}>
-                            <Text style={styles.title}>Станки CNC</Text>
+                            <Text style={styles.title}>{t('machines.title')}</Text>
 
                             {errorMessage && (
                                 <View style={styles.errorBanner}>
                                     <Text style={styles.errorBannerText}>{errorMessage}</Text>
                                     <TouchableOpacity onPress={refetch}>
-                                        <Text style={styles.retryButtonText}>Повторить</Text>
+                                        <Text style={styles.retryButtonText}>{t('machines.retry')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             )}
-
                             {showAddModal && (
                                 <AddMachineModal
                                     visible={showAddModal}
@@ -127,15 +123,11 @@ export const MachineCncScreen = () => {
                                 />
                             )}
 
-                            <View style={styles.searchContainer}>
-                                <TextInput
-                                    style={styles.searchInput}
-                                    placeholder="Поиск по названию или описанию"
-                                    value={searchQuery}
-                                    onChangeText={setSearchQuery}
-                                    clearButtonMode="while-editing"
-                                />
-                            </View>
+                            <SearchInput
+                                placeholder={t('machines.search')}
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                            />
 
                             <View style={styles.machinesList}>
                                 {filteredMachines.length > 0 ? (
@@ -167,8 +159,8 @@ export const MachineCncScreen = () => {
                                 ) : (
                                     <Text style={styles.noResultsText}>
                                         {machines.length === 0
-                                            ? 'Нет станков'
-                                            : 'Станки не найдены'}
+                                            ? t('machines.noMachines')
+                                            : t('machines.notFound')}
                                     </Text>
                                 )}
                             </View>
@@ -177,12 +169,7 @@ export const MachineCncScreen = () => {
                 )}
                 
                 {isAdmin && (
-                    <TouchableOpacity
-                        style={styles.fab}
-                        onPress={() => setShowAddModal(true)}
-                    >
-                        <Text style={styles.fabText}>+</Text>
-                    </TouchableOpacity>
+                    <AddButton onPress={() => setShowAddModal(true)} />
                 )}
             </SafeAreaView>
         </AppLayout>

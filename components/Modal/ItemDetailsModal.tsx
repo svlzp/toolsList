@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, ScrollView, Image, Button, Modal, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Image, Modal, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { PredefinedButton } from '../Button/PredefinedButton';
 
 export interface DetailField {
     label: string;
@@ -31,6 +33,8 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     onDelete,
     showDeleteButton = false,
 }) => {
+    const { t } = useTranslation();
+
     if (!item) return null;
 
     return (
@@ -55,7 +59,7 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                             ))
                         ) : (
                             <View style={styles.noImagePlaceholder}>
-                                <Text style={styles.noImageText}>Нет фото</Text>
+                                <Text style={styles.noImageText}>{t('common.noPhotos')}</Text>
                             </View>
                         )}
                     </ScrollView>
@@ -77,18 +81,19 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                     <View style={styles.buttonContainer}>
                         {showDeleteButton && onDelete && (
                             <>
-                                <Button 
-                                    title="Удалить" 
+                                <PredefinedButton 
+                                    type="text"
+                                    label={t('common.delete')} 
                                     onPress={() => onDelete(item.id)} 
-                                    color="#FF3B30" 
+                                    textColor="#FF3B30"
                                 />
                                 <View style={styles.buttonSpacer} />
                             </>
                         )}
-                        <Button 
-                            title="Закрыть" 
-                            onPress={onClose} 
-                            color="#007AFF" 
+                        <PredefinedButton 
+                            type="blue"
+                            label={t('common.close')} 
+                            onPress={onClose}
                         />
                     </View>
                 </View>

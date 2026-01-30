@@ -1,11 +1,17 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert, Button } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { AppLayout } from '../Layout/AppLayout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGetLearningsQuery, useAddLearningMutation, useDeleteLearningMutation } from '../store/api/learningApi';
 import { useAppSelector } from '../hooks/reduxHooks';
+import { useSearchFilter } from '../hooks/useSearchFilter';
+import { AddButton } from '../components/Button/AddButton';
 import { ItemCard } from '../components/Card/ItemCard';
 import { getImageUrls, FileSource } from '../utils/imageUtils';
+import { translateServerArray } from '../utils/translatorUtils';
+import { SearchInput } from '../components/Search/SearchInput';
+import { AddLearningModal } from '../components/Modal/AddLearningModal';
 import { useNavigation } from '@react-navigation/native';
 
 type Learning = {
@@ -21,6 +27,7 @@ type Learning = {
 };
 
 export const LearningScreen = () => {
+    const { t, i18n } = useTranslation();
     const navigation = useNavigation<any>();
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
@@ -30,23 +37,23 @@ export const LearningScreen = () => {
     const auth = useAppSelector(state => state.auth);
     const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
 
-    const { data: learnings = [], isLoading, error, refetch } = useGetLearningsQuery();
+    const { data: rawLearnings = [], isLoading, error, refetch } = useGetLearningsQuery();
     const [addLearning, { isLoading: isAdding }] = useAddLearningMutation();
     const [deleteLearning] = useDeleteLearningMutation();
 
-    const filteredLearnings = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return learnings;
-        }
-        const lowercasedQuery = searchQuery.toLowerCase();
-        return learnings.filter((learning: any) => 
-            learning.title.toLowerCase().includes(lowercasedQuery)
-        );
-    }, [learnings, searchQuery]);
+  
+    const [learnings, setLearnings] = useState<any[]>([]);
+    useEffect(() => {
+        translateServerArray(rawLearnings, ['title']).then(setLearnings);
+    }, [rawLearnings, i18n.language]);
+
+    const filteredLearnings = useSearchFilter(learnings, searchQuery, {
+        searchFields: ['title'],
+    });
 
     const handleAddLearning = async () => {
         if (!newTitle.trim()) {
-            Alert.alert('Ошибка', 'Введите название урока');
+            Alert.alert(t('common.error'), t('learning.enterTitle'));
             return;
         }
 
@@ -58,27 +65,26 @@ export const LearningScreen = () => {
             setNewTitle('');
             setShowAddModal(false);
             
-            // Переходим на экран редактирования урока
             navigation.navigate('LearningDetail', { learningId: result.id });
         } catch (error) {
             console.error('Ошибка при добавлении урока:', error);
-            Alert.alert('Ошибка', 'Не удалось добавить урок');
+            Alert.alert(t('common.error'), t('learning.addError'));
         }
     };
 
     const handleDeleteLearning = (id: string | number) => {
         Alert.alert(
-            'Удаление',
-            'Вы уверены, что хотите удалить этот урок?',
+            t('learning.deleteConfirm'),
+            t('learning.deleteQuestion'),
             [
-                { text: 'Отмена', onPress: () => {} },
+                { text: t('learning.cancel'), onPress: () => {} },
                 {
-                    text: 'Удалить',
+                    text: t('learning.delete'),
                     onPress: async () => {
                         try {
                             await deleteLearning(Number(id)).unwrap();
                         } catch (error) {
-                            Alert.alert('Ошибка', 'Не удалось удалить урок');
+                            Alert.alert(t('common.error'), t('learning.deleteError'));
                         }
                     },
                 },
@@ -88,8 +94,8 @@ export const LearningScreen = () => {
 
     const errorMessage = error ? (
         ('status' in error ? error.status : 0) === 500 
-            ? 'Ошибка сервера. Попробуйте позже.'
-            : `Ошибка: ${('data' in error ? (error.data as any)?.message : '') || 'Не удалось загрузить'}`
+            ? t('learning.error')
+            : `${t('common.error')}: ${('data' in error ? (error.data as any)?.message : '') || t('learning.notFound')}`
     ) : null;
 
     return (
@@ -97,7 +103,7 @@ export const LearningScreen = () => {
             <SafeAreaView style={styles.safeArea}>
                 {isLoading ? (
                     <View style={styles.loadingContainer}>
-                        <Text>Загрузка обучения...</Text>
+                        <Text>{t('learning.loading')}</Text>
                     </View>
                 ) : (
                     <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -106,46 +112,30 @@ export const LearningScreen = () => {
                                 <View style={styles.errorBanner}>
                                     <Text style={styles.errorBannerText}>{errorMessage}</Text>
                                     <TouchableOpacity onPress={refetch}>
-                                        <Text style={styles.retryButtonText}>Повторить</Text>
+                                        <Text style={styles.retryButtonText}>{t('tools.retry')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             )}
 
                             {showAddModal && (
-                                <View style={styles.addModal}>
-                                    <Text style={styles.modalTitle}>Добавить урок</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Название урока *"
-                                        value={newTitle}
-                                        onChangeText={setNewTitle}
-                                    />
-                                    <View style={styles.modalButtons}>
-                                        <Button
-                                            title="Отмена"
-                                            onPress={() => {
-                                                setShowAddModal(false);
-                                                setNewTitle('');
-                                            }}
-                                        />
-                                        <Button
-                                            title="Создать"
-                                            onPress={handleAddLearning}
-                                            disabled={isAdding}
-                                        />
-                                    </View>
-                                </View>
+                                <AddLearningModal
+                                    visible={showAddModal}
+                                    title={newTitle}
+                                    onChangeTitle={setNewTitle}
+                                    onClose={() => {
+                                        setShowAddModal(false);
+                                        setNewTitle('');
+                                    }}
+                                    onSubmit={handleAddLearning}
+                                    isLoading={isAdding}
+                                />
                             )}
 
-                            <View style={styles.searchContainer}>
-                                <TextInput
-                                    style={styles.searchInput}
-                                    placeholder="Поиск по названию"
-                                    value={searchQuery}
-                                    onChangeText={setSearchQuery}
-                                    clearButtonMode="while-editing"
-                                />
-                            </View>
+                            <SearchInput
+                                placeholder={t('learning.search')}
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                            />
 
                             <View style={styles.learningsList}>
                                 {filteredLearnings.length > 0 ? (
@@ -168,7 +158,7 @@ export const LearningScreen = () => {
                                     ))
                                 ) : (
                                     <Text style={styles.noResultsText}>
-                                        {learnings.length === 0 ? "Нет уроков" : "Уроки не найдены"}
+                                        {learnings.length === 0 ? t('learning.noLearning') : t('learning.notFound')}
                                     </Text>
                                 )}
                             </View>
@@ -177,12 +167,7 @@ export const LearningScreen = () => {
                 )}
                 
                 {isAdmin && (
-                    <TouchableOpacity
-                        style={styles.fab}
-                        onPress={() => setShowAddModal(true)}
-                    >
-                        <Text style={styles.fabText}>+</Text>
-                    </TouchableOpacity>
+                    <AddButton onPress={() => setShowAddModal(true)} />
                 )}
             </SafeAreaView>
         </AppLayout>
@@ -200,34 +185,6 @@ const styles = StyleSheet.create({
     container: {
         padding: 16,
         alignItems: 'center',
-    },
-    addModal: {
-        backgroundColor: '#f5f5f5',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#ddd',
-    },
-    modalTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 12,
-        color: '#333',
-    },
-    input: {
-        height: 40,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        backgroundColor: '#fff',
-        marginBottom: 12,
-    },
-    modalButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 8,
     },
     searchContainer: {
         width: '100%',

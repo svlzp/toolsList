@@ -1,11 +1,11 @@
-// api/baseQuery.ts
+
 import { fetchBaseQuery, FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../store';
 import { setTokens, logout } from '../auth.slice';
 import { jwtDecode } from 'jwt-decode';
 
-const API_URL = 'http://89.39.121.224/';
-// const API_URL_LOCAL = 'http://10.100.102.3:4000/';
+const API_URL = process.env.EXPO_PUBLIC_API_URL ;
+
 
 interface JwtPayload {
   sub: string;        

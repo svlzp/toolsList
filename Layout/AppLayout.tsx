@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import i18n from '../i18n';
 import Logo from '../components/assetsTablet/logo/Logo';
 import { PredefinedButton } from '../components/Button/PredefinedButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -52,6 +53,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     logout();
   };
 
+  const handleLanguageChange = (lang: string) => {
+    i18n.changeLanguage(lang);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -61,9 +66,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </View>
 
           <View style={styles.rightSection}>
-            <RussianButton onPress={() => Alert.alert('Russian')} />
-            <EnglishButton onPress={() => Alert.alert('English')} />
-            <HebrewButton onPress={() => Alert.alert('Hebrew')} />
+            <RussianButton onPress={() => handleLanguageChange('ru')} />
+            <EnglishButton onPress={() => handleLanguageChange('en')} />
+            <HebrewButton onPress={() => handleLanguageChange('he')} />
             <TouchableOpacity 
               style={styles.logoutButton}
               onPress={() => Alert.alert(

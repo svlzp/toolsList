@@ -1,6 +1,15 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, Button, Modal, StyleSheet, ScrollView } from 'react-native';
-import { ImagePickerComponent } from '../ImagePicker/ImagePickerComponent';
+import React, { useCallback } from 'react';
+import { View, Text, Modal, StyleSheet, ScrollView } from 'react-native';
+import { useForm, Controller } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import { ImagePickerComponent } from '../../utils/ImagePickerComponent';
+import { PredefinedInput } from '../Input/PredefinedInput';
+import { PredefinedButton } from '../Button/PredefinedButton';
+
+interface MachineFormData {
+    name: string;
+    description?: string;
+}
 
 export interface AddMachineModalProps {
     visible: boolean;
@@ -19,21 +28,25 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
     onSubmit,
     isLoading = false,
 }) => {
-    const [machineName, setMachineName] = useState('');
-    const [machineDescription, setMachineDescription] = useState('');
-    const [machineImages, setMachineImages] = useState<string[]>([]);
+    const { t } = useTranslation();
+    const { control, handleSubmit, reset, watch } = useForm<MachineFormData>({
+        defaultValues: {
+            name: '',
+            description: '',
+        },
+    });
+    const [machineImages, setMachineImages] = React.useState<string[]>([]);
 
     const handleClose = useCallback(() => {
-        setMachineName('');
-        setMachineDescription('');
+        reset();
         setMachineImages([]);
         onClose();
-    }, [onClose]);
+    }, [onClose, reset]);
 
-    const handleSubmit = async () => {
+    const handleFormSubmit = async (data: MachineFormData) => {
         await onSubmit({
-            name: machineName,
-            description: machineDescription || undefined,
+            name: data.name,
+            description: data.description || undefined,
             images: machineImages,
         });
         handleClose();
@@ -57,30 +70,46 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
                             maxImages={10}
                         />
 
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Название станка *"
-                            value={machineName}
-                            onChangeText={setMachineName}
-                            editable={!isLoading}
+                        <Controller
+                            control={control}
+                            name="name"
+                            rules={{ required: 'Название станка обязательно' }}
+                            render={({ field: { value, onChange } }) => (
+                                <PredefinedInput
+                                    placeholder="Название станка *"
+                                    value={value}
+                                    onChangeText={onChange}
+                                    isDisabled={isLoading}
+                                    isRequired
+                                />
+                            )}
                         />
-                        <TextInput
-                            style={[styles.input, styles.multilineInput]}
-                            placeholder="Описание"
-                            value={machineDescription}
-                            onChangeText={setMachineDescription}
-                            multiline
-                            editable={!isLoading}
+
+                        <Controller
+                            control={control}
+                            name="description"
+                            render={({ field: { value, onChange } }) => (
+                                <PredefinedInput
+                                    placeholder="Описание"
+                                    value={value}
+                                    onChangeText={onChange}
+                                    textArea
+                                    isDisabled={isLoading}
+                                />
+                            )}
                         />
+
                         <View style={styles.modalButtons}>
-                            <Button
-                                title="Отмена"
+                            <PredefinedButton
+                                type="text"
+                                label={t('common.cancel') || 'Отмена'}
                                 onPress={handleClose}
                                 disabled={isLoading}
                             />
-                            <Button
-                                title={isLoading ? 'Загрузка...' : 'Создать'}
-                                onPress={handleSubmit}
+                            <PredefinedButton
+                                type="blue"
+                                label={isLoading ? t('common.saving') || 'Загрузка...' : t('common.create') || 'Создать'}
+                                onPress={handleSubmit(handleFormSubmit)}
                                 disabled={isLoading}
                             />
                         </View>

@@ -9,6 +9,7 @@ import {
     Platform,
     Alert,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 export interface CardItem {
     id: string | number;
@@ -36,20 +37,21 @@ export const ItemCard: React.FC<ItemCardProps> = ({
     variant = 'tool',
     showMenu = false,
 }) => {
+    const { t } = useTranslation();
     const imageSource = item.imageUrl || (item.images && item.images.length > 0 ? item.images[0] : null);
     
     const handleMenuPress = () => {
-        const options = ['Отмена'];
+        const options = [t('common.cancel')];
         const destructiveButtonIndex = -1;
         let editIndex = -1;
         let deleteIndex = -1;
 
         if (onEdit) {
-            options.push('Редактировать');
+            options.push(t('common.edit'));
             editIndex = options.length - 1;
         }
         if (onDelete) {
-            options.push('Удалить');
+            options.push(t('common.delete'));
             deleteIndex = options.length - 1;
         }
 
@@ -73,20 +75,20 @@ export const ItemCard: React.FC<ItemCardProps> = ({
             const androidOptions: any[] = [];
             if (onEdit) {
                 androidOptions.push({
-                    text: 'Редактировать',
+                    text: t('common.edit'),
                     onPress: () => onEdit?.(item),
                 });
             }
             if (onDelete) {
                 androidOptions.push({
-                    text: 'Удалить',
+                    text: t('common.delete'),
                     onPress: () => onDelete?.(item.id),
                     style: 'destructive' as const,
                 });
             }
-            androidOptions.push({ text: 'Отмена', style: 'cancel' as const });
+            androidOptions.push({ text: t('common.cancel'), style: 'cancel' as const });
 
-            Alert.alert('Действия', 'Выберите действие', androidOptions);
+            Alert.alert(t('common.actions'), t('common.selectAction'), androidOptions);
         }
     };
 
@@ -102,7 +104,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({
                         <Image source={{ uri: imageSource }} style={styles.image} />
                     ) : (
                         <View style={styles.noImagePlaceholder}>
-                            <Text style={styles.noImageText}>Нет фото</Text>
+                            <Text style={styles.noImageText}>{t('common.noPhoto')}</Text>
                         </View>
                     )}
                 </View>

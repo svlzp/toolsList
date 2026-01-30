@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Modal, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Modal, StyleSheet, ScrollView } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
-import { ImagePickerComponent } from '../ImagePicker/ImagePickerComponent';
+import { ImagePickerComponent } from '../../utils/ImagePickerComponent';
+import { PredefinedInput } from '../Input/PredefinedInput';
+import { PredefinedButton } from '../Button/PredefinedButton';
 
 export interface AddItemFormData {
     name: string;
@@ -86,16 +88,15 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                                 name="name"
                                 rules={fields.name?.required !== false ? { required: fields.name?.requiredMessage || 'Название обязательно' } : undefined}
                                 render={({ field: { onChange, onBlur, value } }) => (
-                                    <View style={styles.inputContainer}>
-                                        <TextInput
-                                            style={[styles.input, errors.name && styles.inputError]}
-                                            placeholder={fields.name?.placeholder || 'Название *'}
-                                            value={value}
-                                            onChangeText={onChange}
-                                            onBlur={onBlur}
-                                        />
-                                        {errors.name && <Text style={styles.errorText}>{errors.name.message}</Text>}
-                                    </View>
+                                    <PredefinedInput
+                                        placeholder={fields.name?.placeholder || 'Название *'}
+                                        value={value}
+                                        onChangeText={onChange}
+                                        onBlur={onBlur}
+                                        isRequired
+                                        hasError={!!errors.name}
+                                        errorMessage={errors.name?.message}
+                                    />
                                 )}
                             />
                         )}
@@ -106,16 +107,15 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                                 name="item_id"
                                 rules={fields.item_id?.required !== false ? { required: fields.item_id?.requiredMessage || 'ID обязателен' } : undefined}
                                 render={({ field: { onChange, onBlur, value } }) => (
-                                    <View style={styles.inputContainer}>
-                                        <TextInput
-                                            style={[styles.input, errors.item_id && styles.inputError]}
-                                            placeholder={fields.item_id?.placeholder || 'ID *'}
-                                            value={value}
-                                            onChangeText={onChange}
-                                            onBlur={onBlur}
-                                        />
-                                        {errors.item_id && <Text style={styles.errorText}>{errors.item_id.message}</Text>}
-                                    </View>
+                                    <PredefinedInput
+                                        placeholder={fields.item_id?.placeholder || 'ID *'}
+                                        value={value}
+                                        onChangeText={onChange}
+                                        onBlur={onBlur}
+                                        isRequired
+                                        hasError={!!errors.item_id}
+                                        errorMessage={errors.item_id?.message}
+                                    />
                                 )}
                             />
                         )}
@@ -125,14 +125,12 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                                 control={control}
                                 name="description"
                                 render={({ field: { onChange, onBlur, value } }) => (
-                                    <TextInput
-                                        style={[styles.input, (fields.description?.multiline !== false) && styles.multilineInput]}
+                                    <PredefinedInput
                                         placeholder={fields.description?.placeholder || 'Описание'}
                                         value={value}
                                         onChangeText={onChange}
                                         onBlur={onBlur}
-                                        multiline={fields.description?.multiline !== false}
-                                        numberOfLines={fields.description?.multiline !== false ? 3 : 1}
+                                        textArea={fields.description?.multiline !== false}
                                     />
                                 )}
                             />
@@ -143,8 +141,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                                 control={control}
                                 name="size"
                                 render={({ field: { onChange, onBlur, value } }) => (
-                                    <TextInput
-                                        style={styles.input}
+                                    <PredefinedInput
                                         placeholder={fields.size?.placeholder || 'Размер'}
                                         value={value}
                                         onChangeText={onChange}
@@ -159,8 +156,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                                 control={control}
                                 name="type"
                                 render={({ field: { onChange, onBlur, value } }) => (
-                                    <TextInput
-                                        style={styles.input}
+                                    <PredefinedInput
                                         placeholder={fields.type?.placeholder || 'Тип'}
                                         value={value}
                                         onChangeText={onChange}
@@ -171,9 +167,19 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                         )}
 
                         <View style={styles.buttonContainer}>
-                            <Button title={isLoading ? "Сохранение..." : "Сохранить"} onPress={handleSubmit(handleFormSubmit)} disabled={isLoading} />
+                            <PredefinedButton
+                                type="blue"
+                                label={isLoading ? 'Сохранение...' : 'Сохранить'}
+                                onPress={handleSubmit(handleFormSubmit)}
+                                disabled={isLoading}
+                            />
                             <View style={styles.buttonSpacer} />
-                            <Button title="Отмена" onPress={handleClose} color="#888" />
+                            <PredefinedButton
+                                type="text"
+                                label="Отмена"
+                                onPress={handleClose}
+                                disabled={isLoading}
+                            />
                         </View>
                     </View>
                 </ScrollView>

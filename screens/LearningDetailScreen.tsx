@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     ActivityIndicator,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGetLearningByIdQuery, useCreateContentMutation, useDeleteContentMutation } from '../store/api/learningApi';
 import { useAppSelector } from '../hooks/reduxHooks';
@@ -24,6 +25,7 @@ interface ContentBlock {
 }
 
 export const LearningDetailScreen = ({ route, navigation }: any) => {
+    const { t } = useTranslation();
     const learningIdParam = route.params?.learningId;
     const learningId = Number(learningIdParam);
     
@@ -90,7 +92,7 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
 
     const handleAddAllContent = async () => {
         if (contentBlocks.length === 0) {
-            Alert.alert('Ошибка', 'Добавьте хотя бы один блок');
+            Alert.alert(t('common.error'), t('learning.addContent'));
             return;
         }
 
@@ -122,21 +124,21 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
             setContentBlocks([]);
             setIsAddingContent(false);
             refetch();
-            Alert.alert('Успех', 'Все материалы добавлены');
+            Alert.alert(t('learning.success'), t('learning.added'));
         } catch (error) {
             console.error('Ошибка при добавлении контента:', error);
-            Alert.alert('Ошибка', 'Не удалось добавить материалы');
+            Alert.alert(t('common.error'), t('learning.addError'));
         }
     };
 
     const handleDeleteContent = (contentId: number) => {
         Alert.alert(
-            'Удаление',
-            'Вы уверены, что хотите удалить этот материал?',
+            t('learning.deleteConfirm'),
+            t('learning.deleteQuestion'),
             [
-                { text: 'Отмена', onPress: () => {} },
+                { text: t('learning.cancel'), onPress: () => {} },
                 {
-                    text: 'Удалить',
+                    text: t('learning.delete'),
                     onPress: async () => {
                         try {
                             await deleteContent({
@@ -144,10 +146,10 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                                 contentId: contentId,
                             }).unwrap();
                             refetch();
-                            Alert.alert('Успех', 'Материал удален');
+                            Alert.alert(t('learning.success'), t('learning.deleted'));
                         } catch (error) {
                             console.error('Ошибка при удалении:', error);
-                            Alert.alert('Ошибка', 'Не удалось удалить материал');
+                            Alert.alert(t('common.error'), t('learning.deleteError'));
                         }
                     },
                 },
@@ -166,8 +168,8 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
     if (error || !learning) {
         return (
             <View style={styles.loadingContainer}>
-                <Text style={styles.errorText}>Не удалось загрузить урок</Text>
-                <Button title="Повторить" onPress={refetch} />
+                <Text style={styles.errorText}>{t('learning.loadError')}</Text>
+                <Button title={t('common.retry')} onPress={refetch} />
             </View>
         );
     }
@@ -184,7 +186,7 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                                 style={[styles.controlButton, styles.editButton]}
                                 onPress={() => navigation.navigate('LearningEditor', { learningId: learning.id })}
                             >
-                                <Text style={styles.controlButtonText}>Редактировать</Text>
+                                <Text style={styles.controlButtonText}>{t('common.edit')}</Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -194,20 +196,20 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                             style={styles.addButton}
                             onPress={() => setIsAddingContent(true)}
                         >
-                            <Text style={styles.addButtonText}>+ Добавить материал</Text>
+                            <Text style={styles.addButtonText}>+ {t('learning.addMaterial')}</Text>
                         </TouchableOpacity>
                     )}
 
-                    {/* Форма добавления нового контента */}
+                
                     {isAddingContent && (
                         <View style={styles.addContentForm}>
                             <View style={styles.formHeader}>
-                                <Text style={styles.formTitle}>Добавить материалы</Text>
+                                <Text style={styles.formTitle}>{t('learning.addMaterials')}</Text>
                                 <TouchableOpacity onPress={() => {
                                     console.log('➕ Добавление нового блока в форму');
                                     addContentBlock();
                                 }}>
-                                    <Text style={styles.addBlockText}>+ Блок</Text>
+                                    <Text style={styles.addBlockText}>+ {t('learning.block')}</Text>
                                 </TouchableOpacity>
                             </View>
 
@@ -215,7 +217,7 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                                 contentBlocks.map((block, blockIndex) => (
                                     <View key={blockIndex} style={styles.contentBlockForm}>
                                         <View style={styles.blockFormHeader}>
-                                            <Text style={styles.blockFormTitle}>Материал #{blockIndex + 1}</Text>
+                                            <Text style={styles.blockFormTitle}>{t('learning.material')} #{blockIndex + 1}</Text>
                                             <TouchableOpacity onPress={() => removeContentBlock(blockIndex)}>
                                                 <Text style={styles.removeBlockText}>✕</Text>
                                             </TouchableOpacity>
@@ -223,7 +225,7 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
 
                                         <TextInput
                                             style={styles.descriptionInput}
-                                            placeholder="Описание материала"
+                                            placeholder={t('learning.description')}
                                             value={block.description}
                                             onChangeText={(text) => {
                                                 const updated = [...contentBlocks];
@@ -238,7 +240,7 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                                             style={styles.pickButton}
                                             onPress={() => pickImages(blockIndex)}
                                         >
-                                            <Text style={styles.pickButtonText}>Добавить изображения</Text>
+                                            <Text style={styles.pickButtonText}>{t('learning.addImages')}</Text>
                                         </TouchableOpacity>
 
                                         {block.selectedImages.length > 0 && (
@@ -262,7 +264,7 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                                     </View>
                                 ))
                             ) : (
-                                <Text style={styles.noBlocksText}>Нет блоков. Добавьте первый</Text>
+                                <Text style={styles.noBlocksText}>{t('learning.noBlocks')}</Text>
                             )}
 
                             <View style={styles.formButtons}>
@@ -273,14 +275,14 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                                         setContentBlocks([]);
                                     }}
                                 >
-                                    <Text style={styles.buttonText}>Отмена</Text>
+                                    <Text style={styles.buttonText}>{t('common.cancel')}</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
                                     style={[styles.button, styles.submitButton]}
                                     onPress={handleAddAllContent}
                                 >
-                                    <Text style={styles.buttonText}>Сохранить материалы</Text>
+                                    <Text style={styles.buttonText}>{t('learning.saveMaterials')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -290,7 +292,7 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                         {learning.content && learning.content.length > 0 ? (
                             learning.content.map((content: any, index: number) => (
                                 <View key={content.id} style={styles.contentBlock}>
-                                    <Text style={styles.contentIndex}>Материал #{index + 1}</Text>
+                                    <Text style={styles.contentIndex}>{t('learning.material')} #{index + 1}</Text>
 
                                     {content.files && content.files.length > 0 && (
                                         <ScrollView
@@ -323,18 +325,18 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                                             disabled={isDeletingContent}
                                         >
                                             <Text style={styles.deleteButtonText}>
-                                                {isDeletingContent ? 'Удаление...' : 'Удалить материал'}
+                                                {isDeletingContent ? t('common.deleting') : t('learning.deleteMaterial')}
                                             </Text>
                                         </TouchableOpacity>
                                     )}
                                 </View>
                             ))
                         ) : (
-                            <Text style={styles.noContentText}>Нет материалов</Text>
+                            <Text style={styles.noContentText}>{t('learning.noMaterials')}</Text>
                         )}
                     </View>
 
-                    <Button title="Назад" onPress={() => navigation.goBack()} />
+                    <Button title={t('common.back')} onPress={() => navigation.goBack()} />
                 </View>
             </ScrollView>
         </SafeAreaView>
