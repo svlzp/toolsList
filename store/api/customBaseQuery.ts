@@ -4,7 +4,7 @@ import type { RootState } from '../store';
 import { setTokens, logout } from '../auth.slice';
 import { jwtDecode } from 'jwt-decode';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ;
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://89.39.121.224/';
 
 
 interface JwtPayload {
