@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -10,13 +10,17 @@ import {
     Image,
     TouchableOpacity,
     ActivityIndicator,
+    Modal,
+    Dimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGetLearningByIdQuery, useCreateContentMutation, useDeleteContentMutation } from '../store/api/learningApi';
 import { useAppSelector } from '../hooks/reduxHooks';
 import { getImageUrls, FileSource } from '../utils/imageUtils';
+import { translateServerArray } from '../utils/translatorUtils';
 import * as ImagePicker from 'expo-image-picker';
+import { AppLayout } from '@/Layout/AppLayout';
 
 interface ContentBlock {
     id: number;
@@ -25,7 +29,7 @@ interface ContentBlock {
 }
 
 export const LearningDetailScreen = ({ route, navigation }: any) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const learningIdParam = route.params?.learningId;
     const learningId = Number(learningIdParam);
     
@@ -34,14 +38,32 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
         description: string;
         selectedImages: string[];
     }>>([]);
+    const [expandedImage, setExpandedImage] = useState<string | null>(null);
+    const [learning, setLearning] = useState<any>(null);
 
     const auth = useAppSelector(state => state.auth);
     const { user } = useAppSelector(state => state.auth);
     const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
 
-    const { data: learning, isLoading, error, refetch } = useGetLearningByIdQuery(learningId);
+    const { data: rawLearning, isLoading, error, refetch } = useGetLearningByIdQuery(learningId);
     const [createContent] = useCreateContentMutation();
     const [deleteContent, { isLoading: isDeletingContent }] = useDeleteContentMutation();
+
+    useEffect(() => {
+        if (rawLearning) {
+            translateServerArray([rawLearning], ['title']).then(translated => {
+                if (translated[0]) {
+                    setLearning({
+                        ...rawLearning,
+                        ...translated[0],
+                        content: rawLearning.content?.map((c: any) => ({
+                            ...c,
+                        })) || [],
+                    });
+                }
+            });
+        }
+    }, [rawLearning, i18n.language]);
 
     const pickImages = async (blockIndex: number) => {
         try {
@@ -175,6 +197,7 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
     }
 
     return (
+        <AppLayout>
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.container}>
@@ -302,11 +325,15 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                                         >
                                             {getImageUrls(content.files, auth?.accessToken).map(
                                                 (image, idx) => (
-                                                    <Image
+                                                    <TouchableOpacity
                                                         key={idx}
-                                                        source={{ uri: image }}
-                                                        style={styles.contentImage}
-                                                    />
+                                                        onPress={() => setExpandedImage(image)}
+                                                    >
+                                                        <Image
+                                                            source={{ uri: image }}
+                                                            style={styles.contentImage}
+                                                        />
+                                                    </TouchableOpacity>
                                                 )
                                             )}
                                         </ScrollView>
@@ -339,7 +366,37 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                     <Button title={t('common.back')} onPress={() => navigation.goBack()} />
                 </View>
             </ScrollView>
+
+            <Modal
+                visible={expandedImage !== null}
+                transparent={true}
+                onRequestClose={() => setExpandedImage(null)}
+            >
+                <View style={styles.expandedImageContainer}>
+                    <TouchableOpacity
+                        style={styles.expandedImageBackdrop}
+                        onPress={() => setExpandedImage(null)}
+                    >
+                        <View style={styles.expandedImageContent}>
+                            {expandedImage && (
+                                <Image
+                                    source={{ uri: expandedImage }}
+                                    style={styles.expandedImage}
+                                    resizeMode="contain"
+                                />
+                            )}
+                            <TouchableOpacity
+                                style={styles.closeButton}
+                                onPress={() => setExpandedImage(null)}
+                            >
+                                <Text style={styles.closeButtonText}>✕</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
         </SafeAreaView>
+    </AppLayout>
     );
 };
 
@@ -603,5 +660,43 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#FF3B30',
         marginBottom: 16,
+    },
+    expandedImageContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    expandedImageBackdrop: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
+    },
+    expandedImageContent: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    expandedImage: {
+        width: Dimensions.get('window').width * 0.95,
+        height: Dimensions.get('window').height * 0.85,
+    },
+    closeButton: {
+        position: 'absolute',
+        top: 40,
+        right: 20,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    closeButtonText: {
+        fontSize: 24,
+        color: '#fff',
+        fontWeight: 'bold',
     },
 });
