@@ -4,10 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { AppLayout } from '../Layout/AppLayout';
-import { useUpdateQuantityByRtMutation, useGetStagesByWorkIdQuery, useCreateStageMutation } from '../store/api/workOvernightApi';
+import { useUpdateQuantityByRtMutation, useGetStagesByWorkIdQuery, useCreateStageMutation, useUpdateStageFileMutation, useDeleteStageFileMutation, useRemoveStageMutation } from '../store/api/workOvernightApi';
 import { useAppSelector } from '../hooks/reduxHooks';
 import { PredefinedButton } from '@/components/Button/PredefinedButton';
-import { ImagePickerComponent } from '../utils/ImagePickerComponent';
+import { ImageZoomModal } from '../components/Modal/ImageZoomModal';
+import { AddStageImagesModal } from '../components/Modal/AddStageImagesModal';
+import { translateServerArray, translateServerText } from '../utils/translatorUtils';
+import { ImageAnnotator } from '../utils/ImageAnnotator';
+
 
 interface RouteParams {
     id: number;
@@ -26,27 +30,83 @@ interface StageBlock {
 }
 
 export const WorkDetailScreen = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const route = useRoute();
     const navigation = useNavigation<any>();
     const work = route.params as RouteParams;
     const { user } = useAppSelector(state => state.auth);
+    const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
+    const currentLanguage = i18n.language;
 
     const { data: stagesData = [], isLoading: isLoadingStages, refetch: refetchStages } = useGetStagesByWorkIdQuery(work.id);
+    const { accessToken } = useAppSelector(state => state.auth);
     const stagesList = stagesData.map((stage) => stage.description);
 
     const [completed, setCompleted] = useState(work.completed);
     const [updateQuantity, { isLoading }] = useUpdateQuantityByRtMutation();
     const [createStage, { isLoading: isSavingStages }] = useCreateStageMutation();
+    const [updateStageFile] = useUpdateStageFileMutation();
+    const [deleteStageFile] = useDeleteStageFileMutation();
+    const [removeStage] = useRemoveStageMutation();
     
     const [isAddingStages, setIsAddingStages] = useState(false);
     const [stageBlocks, setStageBlocks] = useState<StageBlock[]>([]);
     const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [translatedDescriptions, setTranslatedDescriptions] = useState<{ [key: number]: string }>({});
+    const [translatedBlockDescriptions, setTranslatedBlockDescriptions] = useState<{ [key: number]: string }>({});
+    const [editingStageImage, setEditingStageImage] = useState<{ uri: string; stageId: number; filename: string } | null>(null);
+    const [isSavingEdits, setIsSavingEdits] = useState(false);
 
     const pickImages = async (blockIndex: number) => {
         setSelectedBlockIndex(blockIndex);
     };
+    
+   
+    React.useEffect(() => {
+        const translateDescriptions = async () => {
+            if (stagesData.length === 0) return;
+            
+            const translated = await translateServerArray(stagesData, ['description'], currentLanguage as any);
+            const translatedMap: { [key: number]: string } = {};
+            
+            translated.forEach((stage: any, index: number) => {
+                if (stage.description) {
+                    translatedMap[index] = stage.description;
+                }
+            });
+            
+            setTranslatedDescriptions(translatedMap);
+        };
+        
+        if (stagesData.length > 0) {
+            translateDescriptions();
+        }
+    }, [stagesData, currentLanguage]);
 
+    React.useEffect(() => {
+        const translateBlockDescriptions = async () => {
+            if (stageBlocks.length === 0) return;
+            
+            const translated = await translateServerArray(stageBlocks, ['description'], currentLanguage as any);
+            const translatedMap: { [key: number]: string } = {};
+            
+            translated.forEach((block: any, index: number) => {
+                if (block.description && block.description.trim().length > 0) {
+                    translatedMap[index] = block.description;
+                }
+            });
+            
+            if (Object.keys(translatedMap).length > 0) {
+                setTranslatedBlockDescriptions(translatedMap);
+            }
+        };
+        
+        if (stageBlocks.length > 0) {
+            translateBlockDescriptions();
+        }
+    }, [stageBlocks, currentLanguage]);
+       
     const handleImagesSelected = (images: string[]) => {
         if (selectedBlockIndex !== null) {
             const updated = [...stageBlocks];
@@ -125,6 +185,87 @@ export const WorkDetailScreen = () => {
         }
     };
 
+    const handleEditStageImage = (uri: string, stageId: number, filename: string) => {
+        setEditingStageImage({ uri, stageId, filename });
+    };
+
+    const handleSaveEditedStageImage = async (annotatedImageUri: string) => {
+        if (!editingStageImage) return;
+
+        setIsSavingEdits(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', {
+                uri: annotatedImageUri,
+                name: `edited_stage_${Date.now()}.jpg`,
+                type: 'image/jpeg',
+            } as any);
+            formData.append('oldFilename', editingStageImage.filename);
+
+            await updateStageFile({
+                stageId: editingStageImage.stageId,
+                formData,
+            }).unwrap();
+
+            setEditingStageImage(null);
+            refetchStages();
+            Alert.alert(t('works.success'), t('works.imageSaved'));
+        } catch (error) {
+            console.error('Ошибка при сохранении изображения:', error);
+            Alert.alert(t('common.error'), t('works.imageSaveError'));
+        } finally {
+            setIsSavingEdits(false);
+        }
+    };
+
+    const handleDeleteStageFile = (stageId: number, filename: string) => {
+        Alert.alert(
+            t('works.deleteConfirm'),
+            t('works.deleteFileQuestion'),
+            [
+                { text: t('common.cancel'), onPress: () => {} },
+                {
+                    text: t('works.delete'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteStageFile({ stageId, fileName: filename }).unwrap();
+                            refetchStages();
+                            Alert.alert(t('works.success'), t('works.fileDeleted'));
+                        } catch (error) {
+                            console.error('Ошибка при удалении файла:', error);
+                            Alert.alert(t('common.error'), t('works.deleteFileError'));
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const handleDeleteStage = (stageId: number) => {
+        Alert.alert(
+            t('works.deleteConfirm'),
+            t('works.deleteStageQuestion'),
+            [
+                { text: t('common.cancel'), onPress: () => {} },
+                {
+                    text: t('works.delete'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await removeStage(stageId).unwrap();
+                            refetchStages();
+                            Alert.alert(t('works.success'), t('works.stageDeleted'));
+                        } catch (error) {
+                            console.error('Ошибка при удалении этапа:', error);
+                            Alert.alert(t('common.error'), t('works.deleteStageError'));
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     const handleIncrement = () => {
        
         if (completed < work.quantity) {
@@ -171,6 +312,12 @@ export const WorkDetailScreen = () => {
     return (
         <AppLayout>
             <SafeAreaView style={styles.safeArea}>
+                <ImageZoomModal
+                    visible={!!selectedImage}
+                    imageUri={selectedImage}
+                    onClose={() => setSelectedImage(null)}
+                />
+
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
                     <View style={styles.container}>
                         <Button title={`← ${t('common.back')}`} onPress={() => navigation.goBack()} />
@@ -205,25 +352,90 @@ export const WorkDetailScreen = () => {
                             </View>
                         </View>
 
-                        {stagesList && stagesList.length > 0 && user?.role?.toUpperCase() === 'ADMIN' && (
+                        {stagesList && stagesList.length > 0 && isAdmin && (
                             <View style={styles.card}>
                                 <Text style={styles.cardTitle}>{t('works.setupFeatures')}</Text>
                                 {isLoadingStages ? (
                                     <ActivityIndicator size="small" color="#007AFF" />
                                 ) : (
                                     <>
-                                        {stagesList.map((stage: string, index: number) => (
-                                            <View key={index} style={styles.stageRow}>
-                                                <Text style={styles.stageNumber}>{index + 1}</Text>
-                                                <Text style={styles.stageText}>{stage}</Text>
-                                            </View>
-                                        ))}
+                                        {stagesData.map((stage: any, index: number) => {
+                                            const hasFiles = stage?.files && Array.isArray(stage.files) && stage.files.length > 0;
+                                            return (
+                                                <View key={index}>
+                                                    <View style={styles.stageRow}>
+                                                        <Text style={styles.stageNumber}>{index + 1}</Text>
+                                                        <Text style={styles.stageText}>
+                                                            {translatedDescriptions[index] || stage.description || t('works.noDescription')}
+                                                        </Text>
+                                                        {isAdmin && (
+                                                            <TouchableOpacity
+                                                                style={styles.deleteStageButton}
+                                                                onPress={() => handleDeleteStage(stage.id)}
+                                                            >
+                                                                <Text style={styles.deleteStageButtonText}>🗑️</Text>
+                                                            </TouchableOpacity>
+                                                        )}
+                                                    </View>
+                                                    {hasFiles && (
+                                                        <View style={styles.stageImagesGrid}>
+                                                            {stage.files.map((file: any, fileIndex: number) => {
+                                                                let imageUrl = file?.url 
+                                                                
+                                                                
+                                                                if (accessToken && !imageUrl.includes('token=')) {
+                                                                    const separator = imageUrl.includes('?') ? '&' : '?';
+                                                                    imageUrl = `${imageUrl}${separator}token=${accessToken}`;
+                                                                }
+                                                                
+                                                                return (
+                                                                    <View key={fileIndex} style={styles.stageImageWrapper}>
+                                                                        <TouchableOpacity
+                                                                            onPress={() => {
+                                                                                setSelectedImage(imageUrl);
+                                                                            }}
+                                                                        >
+                                                                            <Image
+                                                                                source={{ 
+                                                                                    uri: imageUrl,
+                                                                                    headers: { Authorization: `Bearer ${accessToken}` }
+                                                                                }}
+                                                                                style={styles.stageImageThumbnail}
+                                                                                onError={(error) => {
+                                                                                    console.error('❌ Image load error:', error);
+                                                                                }}
+                                                                            />
+                                                                        </TouchableOpacity>
+                                                                        {isAdmin && (
+                                                                            <>
+                                                                                <TouchableOpacity
+                                                                                    style={styles.editImageButton}
+                                                                                    onPress={() => handleEditStageImage(imageUrl, stage.id, file.filename)}
+                                                                                >
+                                                                                    <Text style={styles.editImageButtonText}>✏️</Text>
+                                                                                </TouchableOpacity>
+                                                                                <TouchableOpacity
+                                                                                    style={styles.deleteImageButton}
+                                                                                    onPress={() => handleDeleteStageFile(stage.id, file.filename)}
+                                                                                >
+                                                                                    <Text style={styles.deleteImageButtonText}>🗑️</Text>
+                                                                                </TouchableOpacity>
+                                                                            </>
+                                                                        )}
+                                                                    </View>
+                                                                );
+                                                            })}
+                                                        </View>
+                                                    )}
+                                                </View>
+                                            );
+                                        })}
                                     </>
                                 )}
                             </View>
                         )}
 
-                        {user?.role?.toUpperCase() === 'ADMIN' && (
+                        {isAdmin && (
                             <TouchableOpacity 
                                 style={styles.floatingAddButton}
                                 onPress={() => setIsAddingStages(!isAddingStages)}
@@ -234,7 +446,7 @@ export const WorkDetailScreen = () => {
                             </TouchableOpacity>
                         )}
 
-                        {isAddingStages && user?.role?.toUpperCase() === 'ADMIN' && (
+                        {isAddingStages && isAdmin && (
                             <View style={styles.addStagesForm}>
                                 <Text style={styles.formTitle}>{t('works.addSetupFeatures')}</Text>
                                 
@@ -248,18 +460,26 @@ export const WorkDetailScreen = () => {
                                                 </TouchableOpacity>
                                             </View>
 
-                                            <TextInput
-                                                style={styles.descriptionInput}
-                                                placeholder={t('works.featureDescription')}
-                                                value={block.description}
-                                                onChangeText={(text) => {
-                                                    const updated = [...stageBlocks];
-                                                    updated[blockIndex].description = text;
-                                                    setStageBlocks(updated);
-                                                }}
-                                                multiline={true}
-                                                numberOfLines={3}
-                                            />
+                                            <View>
+                                                <TextInput
+                                                    style={styles.descriptionInput}
+                                                    placeholder={t('works.featureDescription')}
+                                                    value={block.description}
+                                                    onChangeText={(text) => {
+                                                        const updated = [...stageBlocks];
+                                                        updated[blockIndex].description = text;
+                                                        setStageBlocks(updated);
+                                                    }}
+                                                    multiline={true}
+                                                    numberOfLines={3}
+                                                    placeholderTextColor="#999"
+                                                />
+                                                {translatedBlockDescriptions[blockIndex] && translatedBlockDescriptions[blockIndex] !== block.description && (
+                                                    <Text style={styles.translatedPreview}>
+                                                        {translatedBlockDescriptions[blockIndex]}
+                                                    </Text>
+                                                )}
+                                            </View>
 
                                             <TouchableOpacity 
                                                 style={styles.pickButton}
@@ -272,10 +492,16 @@ export const WorkDetailScreen = () => {
                                                 <View style={styles.imagesGrid}>
                                                     {block.selectedImages.map((image, imageIndex) => (
                                                         <View key={imageIndex} style={styles.imageWrapper}>
-                                                            <Image 
-                                                                source={{ uri: image }} 
-                                                                style={styles.thumbnail}
-                                                            />
+                                                            <TouchableOpacity
+                                                                onPress={() => {
+                                                                    setSelectedImage(image);
+                                                                }}
+                                                            >
+                                                                <Image 
+                                                                    source={{ uri: image }} 
+                                                                    style={styles.thumbnail}
+                                                                />
+                                                            </TouchableOpacity>
                                                             <TouchableOpacity 
                                                                 style={styles.removeImageButton}
                                                                 onPress={() => removeImage(blockIndex, imageIndex)}
@@ -386,25 +612,26 @@ export const WorkDetailScreen = () => {
                 </ScrollView>
             </SafeAreaView>
 
-          
-            <Modal visible={selectedBlockIndex !== null} animationType="slide">
-                {selectedBlockIndex !== null && (
-                    <SafeAreaView style={styles.modalContainer}>
-                        <View style={styles.modalHeader}>
-                            <TouchableOpacity onPress={() => setSelectedBlockIndex(null)}>
-                                <Text style={styles.modalCloseButton}>✕</Text>
-                            </TouchableOpacity>
-                            <Text style={styles.modalTitle}>{t('learning.addImages')}</Text>
-                            <View style={{ width: 40 }} />
-                        </View>
-                        <ImagePickerComponent 
-                            images={stageBlocks[selectedBlockIndex]?.selectedImages || []}
-                            onImagesChange={handleImagesSelected}
-                            maxImages={10}
-                            onClose={() => setSelectedBlockIndex(null)}
-                            hideHeader={true}
-                        />
-                    </SafeAreaView>
+            <AddStageImagesModal
+                visible={selectedBlockIndex !== null}
+                selectedBlockIndex={selectedBlockIndex}
+                stageBlocks={stageBlocks}
+                onClose={() => setSelectedBlockIndex(null)}
+                onImagesChange={handleImagesSelected}
+            />
+
+            <Modal
+                visible={editingStageImage !== null && !isSavingEdits}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setEditingStageImage(null)}
+            >
+                {editingStageImage && (
+                    <ImageAnnotator
+                        imageUri={editingStageImage.uri}
+                        onSave={handleSaveEditedStageImage}
+                        onCancel={() => setEditingStageImage(null)}
+                    />
                 )}
             </Modal>
         </AppLayout>
@@ -576,6 +803,62 @@ const styles = StyleSheet.create({
         flex: 1,
         lineHeight: 20,
     },
+    stageImagesGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        paddingVertical: 8,
+        paddingHorizontal: 36,
+        backgroundColor: '#f9f9f9',
+    },
+    stageImageWrapper: {
+        position: 'relative',
+    },
+    stageImageThumbnail: {
+        width: 80,
+        height: 80,
+        borderRadius: 8,
+        backgroundColor: '#e0e0e0',
+    },
+    editImageButton: {
+        position: 'absolute',
+        top: 2,
+        right: 2,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: 'rgba(0, 122, 255, 0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#fff',
+    },
+    editImageButtonText: {
+        fontSize: 14,
+    },
+    deleteImageButton: {
+        position: 'absolute',
+        bottom: 2,
+        right: 2,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: 'rgba(255, 59, 48, 0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#fff',
+    },
+    deleteImageButtonText: {
+        fontSize: 14,
+    },
+    deleteStageButton: {
+        marginLeft: 8,
+        padding: 4,
+    },
+    deleteStageButtonText: {
+        fontSize: 18,
+    },
     addStageButton: {
         marginTop: 12,
         paddingVertical: 10,
@@ -741,5 +1024,16 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         width: 40,
         textAlign: 'center',
+    },
+    translatedPreview: {
+        fontSize: 13,
+        color: '#666',
+        fontStyle: 'italic',
+        marginTop: 8,
+        padding: 10,
+        backgroundColor: '#f0f8ff',
+        borderRadius: 6,
+        borderLeftWidth: 3,
+        borderLeftColor: '#007AFF',
     },
 });

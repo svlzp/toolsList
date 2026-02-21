@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -11,16 +11,17 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Modal,
-    Dimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useGetLearningByIdQuery, useCreateContentMutation, useDeleteContentMutation } from '../store/api/learningApi';
+import { useGetLearningByIdQuery, useCreateContentMutation, useDeleteContentMutation, useUpdateContentMutation, useUpdateFilesMutation, useDeleteContentFileMutation } from '../store/api/learningApi';
 import { useAppSelector } from '../hooks/reduxHooks';
 import { getImageUrls, FileSource } from '../utils/imageUtils';
-import { translateServerArray } from '../utils/translatorUtils';
+import { translateServerArray, translateServerText } from '../utils/translatorUtils';
 import * as ImagePicker from 'expo-image-picker';
 import { AppLayout } from '@/Layout/AppLayout';
+import { ImageAnnotator } from '../utils/ImageAnnotator';
+import { ImageZoomModal } from '../components/Modal/ImageZoomModal';
 
 interface ContentBlock {
     id: number;
@@ -40,6 +41,11 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
     }>>([]);
     const [expandedImage, setExpandedImage] = useState<string | null>(null);
     const [learning, setLearning] = useState<any>(null);
+    const [editingImage, setEditingImage] = useState<{ uri: string; contentId: number; fileId: number } | null>(null);
+    const [isSavingEdits, setIsSavingEdits] = useState(false);
+    const [translatedContentDescriptions, setTranslatedContentDescriptions] = useState<{ [key: number]: string }>({});
+    const [translatedBlockDescriptions, setTranslatedBlockDescriptions] = useState<{ [key: number]: string }>({});
+    const currentLanguage = i18n.language;
 
     const auth = useAppSelector(state => state.auth);
     const { user } = useAppSelector(state => state.auth);
@@ -48,6 +54,8 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
     const { data: rawLearning, isLoading, error, refetch } = useGetLearningByIdQuery(learningId);
     const [createContent] = useCreateContentMutation();
     const [deleteContent, { isLoading: isDeletingContent }] = useDeleteContentMutation();
+    const [updateContent] = useUpdateContentMutation();
+    const [deleteContentFile] = useDeleteContentFileMutation();
 
     useEffect(() => {
         if (rawLearning) {
@@ -64,6 +72,46 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
             });
         }
     }, [rawLearning, i18n.language]);
+
+    React.useEffect(() => {
+        const translateContentDescriptions = async () => {
+            if (!learning?.content || learning.content.length === 0) return;
+            
+            const translated = await translateServerArray(learning.content, ['description'], currentLanguage as any);
+            const translatedMap: { [key: number]: string } = {};
+            
+            translated.forEach((item: any, index: number) => {
+                if (item.description) {
+                    translatedMap[index] = item.description;
+                }
+            });
+            
+            setTranslatedContentDescriptions(translatedMap);
+        };
+        
+        translateContentDescriptions();
+    }, [learning?.content, currentLanguage]);
+
+    React.useEffect(() => {
+        const translateBlockDescriptions = async () => {
+            if (contentBlocks.length === 0) return;
+            
+            const translated = await translateServerArray(contentBlocks, ['description'], currentLanguage as any);
+            const translatedMap: { [key: number]: string } = {};
+            
+            translated.forEach((item: any, index: number) => {
+                if (item.description && item.description.trim().length > 0) {
+                    translatedMap[index] = item.description;
+                }
+            });
+            
+            if (Object.keys(translatedMap).length > 0) {
+                setTranslatedBlockDescriptions(translatedMap);
+            }
+        };
+        
+        translateBlockDescriptions();
+    }, [contentBlocks, currentLanguage]);
 
     const pickImages = async (blockIndex: number) => {
         try {
@@ -179,6 +227,85 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
         );
     };
 
+    const handleDeleteFile = (contentId: number, filename: string) => {
+        Alert.alert(
+            t('learning.deleteConfirm'),
+            t('learning.deleteFileQuestion'),
+            [
+                { text: t('learning.cancel'), onPress: () => {} },
+                {
+                    text: t('learning.delete'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteContentFile({
+                                learningId: learningId,
+                                contentId: contentId,
+                                filename: filename,
+                            }).unwrap();
+                            refetch();
+                            Alert.alert(t('learning.success'), t('learning.fileDeleted'));
+                        } catch (error) {
+                            console.error('Ошибка при удалении файла:', error);
+                            Alert.alert(t('common.error'), t('learning.deleteFileError'));
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const handleEditImage = (uri: string, contentId: number, fileId: number) => {
+        setEditingImage({ uri, contentId, fileId });
+    };
+
+    const handleSaveEditedImage = async (annotatedImageUri: string) => {
+        if (!editingImage) return;
+
+        setIsSavingEdits(true);
+        try {
+         
+            const contentBlock = learning?.content?.find((c: any) => c.id === editingImage.contentId);
+            const oldFile = contentBlock?.files?.find((f: any) => f.id === editingImage.fileId);
+            const oldFileName = oldFile?.filename || '';
+
+            console.log('📸 === handleSaveEditedImage ===');
+            console.log('contentId:', editingImage.contentId, 'fileId:', editingImage.fileId);
+            console.log('oldFile found:', oldFile);
+            console.log('oldFileName:', oldFileName);
+
+            const formData = new FormData();
+            formData.append('files', {
+                uri: annotatedImageUri,
+                name: `edited_image_${Date.now()}.jpg`,
+                type: 'image/jpeg',
+            } as any);
+
+           
+            if (oldFileName) {
+                formData.append('oldFileNames', oldFileName);
+                console.log('📤 Sending oldFileNames in FormData:', oldFileName);
+            }
+
+            console.log('📤 FormData parts:', JSON.stringify((formData as any)._parts));
+
+            await updateContent({
+                learningId: learningId,
+                contentId: editingImage.contentId,
+                formData,
+            }).unwrap();
+
+            setEditingImage(null);
+            refetch();
+            Alert.alert(t('learning.success'), t('learning.imageSaved'));
+        } catch (error) {
+            console.error('Ошибка при сохранении отредактированного изображения:', error);
+            Alert.alert(t('common.error'), t('learning.imageSaveError'));
+        } finally {
+            setIsSavingEdits(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <View style={styles.loadingContainer}>
@@ -259,6 +386,12 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                                             numberOfLines={3}
                                         />
 
+                                        {translatedBlockDescriptions[blockIndex] && translatedBlockDescriptions[blockIndex] !== block.description && (
+                                            <Text style={styles.translatedPreview}>
+                                                {translatedBlockDescriptions[blockIndex]}
+                                            </Text>
+                                        )}
+
                                         <TouchableOpacity
                                             style={styles.pickButton}
                                             onPress={() => pickImages(blockIndex)}
@@ -325,15 +458,32 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                                         >
                                             {getImageUrls(content.files, auth?.accessToken).map(
                                                 (image, idx) => (
-                                                    <TouchableOpacity
-                                                        key={idx}
-                                                        onPress={() => setExpandedImage(image)}
-                                                    >
-                                                        <Image
-                                                            source={{ uri: image }}
-                                                            style={styles.contentImage}
-                                                        />
-                                                    </TouchableOpacity>
+                                                    <View key={idx} style={styles.imageContentWrapper}>
+                                                        <TouchableOpacity
+                                                            onPress={() => setExpandedImage(image)}
+                                                        >
+                                                            <Image
+                                                                source={{ uri: image }}
+                                                                style={styles.contentImage}
+                                                            />
+                                                        </TouchableOpacity>
+                                                        {isAdmin && (
+                                                            <>
+                                                                <TouchableOpacity
+                                                                    style={styles.editImageButton}
+                                                                    onPress={() => handleEditImage(image, content.id, content.files[idx].id)}
+                                                                >
+                                                                    <Text style={styles.editImageButtonText}>✏️</Text>
+                                                                </TouchableOpacity>
+                                                                <TouchableOpacity
+                                                                    style={styles.deleteImageButton}
+                                                                    onPress={() => handleDeleteFile(content.id, content.files[idx].filename)}
+                                                                >
+                                                                    <Text style={styles.deleteImageButtonText}>🗑️</Text>
+                                                                </TouchableOpacity>
+                                                            </>
+                                                        )}
+                                                    </View>
                                                 )
                                             )}
                                         </ScrollView>
@@ -341,7 +491,7 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
 
                                     {content.description && (
                                         <Text style={styles.contentDescription}>
-                                            {content.description}
+                                            {translatedContentDescriptions[index] || content.description}
                                         </Text>
                                     )}
 
@@ -367,33 +517,25 @@ export const LearningDetailScreen = ({ route, navigation }: any) => {
                 </View>
             </ScrollView>
 
-            <Modal
+            <ImageZoomModal
                 visible={expandedImage !== null}
+                imageUri={expandedImage}
+                onClose={() => setExpandedImage(null)}
+            />
+
+            <Modal
+                visible={editingImage !== null && !isSavingEdits}
                 transparent={true}
-                onRequestClose={() => setExpandedImage(null)}
+                animationType="slide"
+                onRequestClose={() => setEditingImage(null)}
             >
-                <View style={styles.expandedImageContainer}>
-                    <TouchableOpacity
-                        style={styles.expandedImageBackdrop}
-                        onPress={() => setExpandedImage(null)}
-                    >
-                        <View style={styles.expandedImageContent}>
-                            {expandedImage && (
-                                <Image
-                                    source={{ uri: expandedImage }}
-                                    style={styles.expandedImage}
-                                    resizeMode="contain"
-                                />
-                            )}
-                            <TouchableOpacity
-                                style={styles.closeButton}
-                                onPress={() => setExpandedImage(null)}
-                            >
-                                <Text style={styles.closeButtonText}>✕</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </TouchableOpacity>
-                </View>
+                {editingImage && (
+                    <ImageAnnotator
+                        imageUri={editingImage.uri}
+                        onSave={handleSaveEditedImage}
+                        onCancel={() => setEditingImage(null)}
+                    />
+                )}
             </Modal>
         </SafeAreaView>
     </AppLayout>
@@ -404,6 +546,7 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: '#fff',
+        borderRadius: 12,
     },
     scrollContainer: {
         flexGrow: 1,
@@ -661,42 +804,51 @@ const styles = StyleSheet.create({
         color: '#FF3B30',
         marginBottom: 16,
     },
-    expandedImageContainer: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.9)',
-        justifyContent: 'center',
-        alignItems: 'center',
+    imageContentWrapper: {
+        position: 'relative',
+        marginRight: 8,
     },
-    expandedImageBackdrop: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: '100%',
-    },
-    expandedImageContent: {
-        width: '100%',
-        height: '100%',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    expandedImage: {
-        width: Dimensions.get('window').width * 0.95,
-        height: Dimensions.get('window').height * 0.85,
-    },
-    closeButton: {
+    editImageButton: {
         position: 'absolute',
-        top: 40,
-        right: 20,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+        top: 5,
+        right: 5,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(0, 122, 255, 0.9)',
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#fff',
     },
-    closeButtonText: {
-        fontSize: 24,
-        color: '#fff',
-        fontWeight: 'bold',
+    editImageButtonText: {
+        fontSize: 16,
+    },
+    deleteImageButton: {
+        position: 'absolute',
+        bottom: 5,
+        right: 5,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255, 59, 48, 0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#fff',
+    },
+    deleteImageButtonText: {
+        fontSize: 16,
+    },
+    translatedPreview: {
+        fontSize: 13,
+        color: '#666',
+        fontStyle: 'italic',
+        marginTop: 8,
+        padding: 10,
+        backgroundColor: '#f0f8ff',
+        borderRadius: 6,
+        borderLeftWidth: 3,
+        borderLeftColor: '#007AFF',
     },
 });

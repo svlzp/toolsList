@@ -125,6 +125,8 @@ export const getImageUrls = (
         return [];
     }
     
+    const baseUrl = 'http://localhost:3000';
+    
     const result = files.map((f: any) => {
         let url = '';
         
@@ -148,8 +150,12 @@ export const getImageUrls = (
        
         url = url.replace(/\\/g, '/');
         
+        // Проверяем, является ли уже полным URL
+        if (!url.startsWith('http')) {
+            url = `${baseUrl}/${url}`;
+        }
         
-       
+        // Добавляем токен, если нужно
         if (token && !url.includes('?')) {
             url += `?token=${token}`;
         }

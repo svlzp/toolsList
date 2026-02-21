@@ -43,6 +43,7 @@ export interface WorkStage {
   id: number;
   workId: number;
   description: string;
+  files: string[]; 
   order: number;
 }
 
@@ -57,7 +58,7 @@ export const workOvernightApi = createApi({
   baseQuery: baseQuery,
   tagTypes: ['WorkOvernight'],
   endpoints: (builder) => ({
-    // Получить все работы с фильтром по архивированию и машине
+
     getAllWorks: builder.query<
       WorkOvernight[],
       { includeArchived?: boolean; machineId?: number }
@@ -74,7 +75,7 @@ export const workOvernightApi = createApi({
       providesTags: ['WorkOvernight'],
     }),
 
-    // Получить все архивированные работы
+  
     getArchivedWorks: builder.query<WorkOvernight[], void>({
       query: () => ({
         url: '/work-overnight/archived',
@@ -83,7 +84,6 @@ export const workOvernightApi = createApi({
       providesTags: ['WorkOvernight'],
     }),
 
-    // Получить работы по машине
     getWorkByMachine: builder.query<
       WorkOvernight[],
       { machineId: number; includeArchived?: boolean }
@@ -96,7 +96,7 @@ export const workOvernightApi = createApi({
       providesTags: (result, error, { machineId }) => [{ type: 'WorkOvernight', id: machineId }],
     }),
 
-    // Получить работу по ID
+
     getWorkById: builder.query<WorkOvernight, number>({
       query: (id) => ({
         url: `/work-overnight/${id}`,
@@ -105,7 +105,7 @@ export const workOvernightApi = createApi({
       providesTags: (result, error, id) => [{ type: 'WorkOvernight', id }],
     }),
 
-    // Получить работу по RT
+
     getWorkByRt: builder.query<WorkOvernight[], string>({
       query: (rt) => ({
         url: `/work-overnight/rt/${rt}`,
@@ -114,7 +114,7 @@ export const workOvernightApi = createApi({
       providesTags: (result, error, rt) => [{ type: 'WorkOvernight', id: rt }],
     }),
 
-    // Создать новую работу (только ADMIN)
+
     createWork: builder.mutation<WorkOvernight, CreateWorkDto>({
       query: (data) => {
         console.log('📝 createWork - body:', data);
@@ -127,7 +127,7 @@ export const workOvernightApi = createApi({
       invalidatesTags: ['WorkOvernight'],
     }),
 
-    // Обновить работу (только ADMIN)
+
     updateWork: builder.mutation<
       WorkOvernight,
       { id: number; data: UpdateWorkDto }
@@ -140,7 +140,7 @@ export const workOvernightApi = createApi({
       invalidatesTags: (result, error, { id }) => [{ type: 'WorkOvernight', id }],
     }),
 
-    // Обновить количество по RT (для авторизованных пользователей)
+
     updateQuantityByRt: builder.mutation<
       WorkOvernight,
       UpdateQuantityDto
@@ -156,7 +156,7 @@ export const workOvernightApi = createApi({
       invalidatesTags: ['WorkOvernight'],
     }),
 
-    // Удалить работу (только ADMIN)
+
     deleteWork: builder.mutation<void, number>({
       query: (id) => ({
         url: `/work-overnight/${id}`,
@@ -165,7 +165,7 @@ export const workOvernightApi = createApi({
       invalidatesTags: ['WorkOvernight'],
     }),
 
-    // Получить stages (особенности установки) по ID работы
+ 
     getStagesByWorkId: builder.query<WorkStage[], number>({
       query: (workId: number) => ({
         url: `/work-overnight/${workId}/stages`,
@@ -174,7 +174,7 @@ export const workOvernightApi = createApi({
       providesTags: (result, error, workId) => [{ type: 'WorkOvernight', id: workId }],
     }),
 
-    // Получить stages по RT
+
     getStagesByRt: builder.query<WorkStage[], string>({
       query: (rt: string) => ({
         url: `/work-overnight/stages/rt/${rt}`,
@@ -183,7 +183,7 @@ export const workOvernightApi = createApi({
       providesTags: (result, error, rt) => [{ type: 'WorkOvernight', id: rt }],
     }),
 
-    // Создать stage с изображениями
+  
     createStage: builder.mutation<
       WorkStage,
       { workId: number; formData: FormData }
@@ -194,6 +194,47 @@ export const workOvernightApi = createApi({
         body: formData,
       }),
       invalidatesTags: (result, error, { workId }) => [{ type: 'WorkOvernight', id: workId }],
+    }),
+
+  
+    updateStageFile: builder.mutation<
+      WorkStage,
+      { stageId: number; formData: FormData }
+    >({
+      query: ({ stageId, formData }) => {
+      
+        return {
+          url: `/work-overnight/stages/${stageId}/file`,
+          method: 'PATCH',
+          body: formData,
+        };
+      },
+      invalidatesTags: ['WorkOvernight'],
+    }),
+
+    deleteStageFile: builder.mutation<
+      void,
+      { stageId: number; fileName: string }
+    >({
+      query: ({ stageId, fileName }) => {
+        
+        return {
+          url: `/work-overnight/stages/${stageId}/file/${fileName}`,
+          method: 'DELETE',
+        };
+      },
+      invalidatesTags: ['WorkOvernight'],
+    }),
+
+    removeStage: builder.mutation<void, number>({
+      query: (stageId) => {
+  
+        return {
+          url: `/work-overnight/stages/${stageId}`,
+          method: 'DELETE',
+        };
+      },
+      invalidatesTags: ['WorkOvernight'],
     }),
   }),
 });
@@ -211,4 +252,7 @@ export const {
   useGetStagesByWorkIdQuery,
   useGetStagesByRtQuery,
   useCreateStageMutation,
+  useUpdateStageFileMutation,
+  useDeleteStageFileMutation,
+  useRemoveStageMutation,
 } = workOvernightApi;

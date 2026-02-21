@@ -10,6 +10,15 @@ import {
     Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useAppSelector } from '../../hooks/reduxHooks';
+import { getFileUrl } from '../../utils/fileUtils';
+
+export interface ServerFile {
+    id?: number;
+    filename: string;
+    originalName: string;
+    path: string;
+}
 
 export interface CardItem {
     id: string | number;
@@ -18,6 +27,7 @@ export interface CardItem {
     description?: string;
     imageUrl?: string;
     images?: string[];
+    files?: ServerFile[];
 }
 
 interface ItemCardProps {
@@ -38,7 +48,23 @@ export const ItemCard: React.FC<ItemCardProps> = ({
     showMenu = false,
 }) => {
     const { t } = useTranslation();
-    const imageSource = item.imageUrl || (item.images && item.images.length > 0 ? item.images[0] : null);
+    const { accessToken } = useAppSelector(state => state.auth);
+    
+
+    let imageSource: string | null = null;
+    
+    if (item.imageUrl) {
+       
+        imageSource = item.imageUrl.startsWith('http') 
+            ? item.imageUrl 
+            : getFileUrl(item.imageUrl, accessToken);
+    } else if (item.files && item.files.length > 0) {
+       
+        imageSource = getFileUrl(item.files[0].path, accessToken);
+    } else if (item.images && item.images.length > 0) {
+     
+        imageSource = item.images[0];
+    }
     
     const handleMenuPress = () => {
         const options = [t('common.cancel')];

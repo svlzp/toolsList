@@ -11,7 +11,7 @@ import { ItemCard } from '../components/Card/ItemCard';
 import { AddMachineModal } from '../components/Modal/AddMachineModal';
 import { SearchInput } from '../components/Search/SearchInput';
 import { getImageUrls } from '../utils/imageUtils';
-import { translateServerObject, translateServerArray } from '../utils/translatorUtils';
+import { translateServerArray } from '../utils/translatorUtils';
 import { useNavigation } from '@react-navigation/native';
 
 export const MachineCncScreen = () => {
@@ -28,7 +28,7 @@ export const MachineCncScreen = () => {
     const [createMachine, { isLoading: isCreating }] = useCreateMachineMutation();
     const [deleteMachine] = useDeleteMachineMutation();
 
- 
+  
     const [machines, setMachines] = useState<any[]>([]);
     useEffect(() => {
         translateServerArray(rawMachines, ['name', 'description']).then(setMachines);

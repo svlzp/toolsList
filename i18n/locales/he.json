@@ -14,6 +14,7 @@
     "circle": "עיגול",
     "rectangle": "מלבן",
     "eraser": "מחק",
+    "text": "טקסט",
     "color": "צבע",
     "lineWidth": "עובי קו",
     "undo": "ביטול",
@@ -177,7 +178,16 @@
     "updateQuantityError": "עדכון הכמות נכשל",
     "manageQuantity": "ניהול כמויות",
     "stagesAdded": "תכונות הגדרה נוספו",
-    "stagesSaveError": "שמירת תכונות הגדרה נכשלה"
+    "stagesSaveError": "שמירת תכונות הגדרה נכשלה",
+    "noDescription": "אין תיאור",
+    "deleteFileQuestion": "האם אתה בטוח שברצונך למחוק קובץ זה?",
+    "fileDeleted": "הקובץ נמחק בהצלחה",
+    "deleteFileError": "מחיקת הקובץ נכשלה",
+    "deleteStageQuestion": "האם אתה בטוח שברצונך למחוק שלב זה?",
+    "stageDeleted": "השלב נמחק בהצלחה",
+    "deleteStageError": "מחיקת השלב נכשלה",
+    "imageSaved": "התמונה נשמרה",
+    "imageSaveError": "שמירת התמונה נכשלה"
   },
   "learning": {
     "title": "למידה",
@@ -231,6 +241,12 @@
     "titleEmpty": "כותרת לא יכולה להיות ריקה",
     "materials": "חומרים",
     "updateError": "עדכון כותרת נכשל",
-    "materialsSaved": "כל החומרים נשמרו"
+    "materialsSaved": "כל החומרים נשמרו",
+    "imageLoadError": "טעינת התמונה נכשלה",
+    "imageSaved": "התמונה נשמרה בהצלחה",
+    "imageSaveError": "שמירת התמונה שנערכה נכשלה",
+    "deleteFileQuestion": "האם אתה בטוח שברצונך למחוק קובץ זה?",
+    "fileDeleted": "הקובץ נמחק בהצלחה",
+    "deleteFileError": "מחיקת הקובץ נכשלה"
   }
 }

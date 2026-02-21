@@ -62,7 +62,7 @@ export const learningApi = createApi({
     tagTypes: ['Learning', 'LearningContent'],
     endpoints: (builder) => ({
         
-        // Получение всех уроков
+        
         getLearnings: builder.query<Learning[], void>({
             query: () => 'learning',
             providesTags: (result) =>
@@ -74,13 +74,13 @@ export const learningApi = createApi({
                     : [{ type: 'Learning', id: 'LIST' }],
         }),
 
-        // Получение урока по ID
+        
         getLearningById: builder.query<Learning, number>({
             query: (id) => `learning/${id}`,
             providesTags: (result, error, id) => [{ type: 'Learning', id }],
         }),
 
-        // Создание урока (только название)
+      
         addLearning: builder.mutation<Learning, CreateLearningDto>({
             query: (dto) => ({
                 url: 'learning',
@@ -90,7 +90,7 @@ export const learningApi = createApi({
             invalidatesTags: [{ type: 'Learning', id: 'LIST' }],
         }),
 
-        // Обновление урока
+        
         updateLearning: builder.mutation<Learning, { id: number; dto: UpdateLearningDto }>({
             query: ({ id, dto }) => ({
                 url: `learning/${id}`,
@@ -103,7 +103,7 @@ export const learningApi = createApi({
             ],
         }),
 
-        // Удаление урока
+       
         deleteLearning: builder.mutation<void, number>({
             query: (id) => ({
                 url: `learning/${id}`,
@@ -115,7 +115,7 @@ export const learningApi = createApi({
             ],
         }),
 
-        // Создание контента с файлами
+   
         createContent: builder.mutation<ContentLearning, { 
             learningId: number; 
             formData: FormData 
@@ -136,7 +136,7 @@ export const learningApi = createApi({
             ],
         }),
 
-        // Обновление контента с файлами
+       
         updateContent: builder.mutation<ContentLearning, { 
             learningId: number; 
             contentId: number; 
@@ -163,12 +163,49 @@ export const learningApi = createApi({
             ],
         }),
 
-        // Удаление контента
+        
         deleteContent: builder.mutation<void, { learningId: number; contentId: number }>({
             query: ({ learningId, contentId }) => ({
                 url: `learning/${learningId}/content/${contentId}`,
                 method: 'DELETE',
             }),
+            invalidatesTags: (result, error, { learningId, contentId }) => [
+                { type: 'Learning', id: learningId },
+                { type: 'LearningContent', id: contentId },
+            ],
+        }),
+        updateFiles: builder.mutation<ContentLearning, {
+            learningId: number;
+            contentId: number;
+            oldFileNames: string;
+        }>({
+            query: ({ learningId, contentId, oldFileNames }) => {
+                
+                
+                return {
+                    url: `learning/${learningId}/content/${contentId}/files`,
+                    method: 'PATCH',
+                    body: oldFileNames,
+                };
+            },
+            invalidatesTags: (result, error, { learningId, contentId }) => [
+                { type: 'Learning', id: learningId },
+                { type: 'LearningContent', id: contentId },
+            ],
+        }),
+
+        deleteContentFile: builder.mutation<void, {
+            learningId: number;
+            contentId: number;
+            filename: string;
+        }>({
+            query: ({ learningId, contentId, filename }) => {
+                
+                return {
+                    url: `learning/${learningId}/content/${contentId}/file/${filename}`,
+                    method: 'DELETE',
+                };
+            },
             invalidatesTags: (result, error, { learningId, contentId }) => [
                 { type: 'Learning', id: learningId },
                 { type: 'LearningContent', id: contentId },
@@ -186,6 +223,8 @@ export const {
     useCreateContentMutation,
     useUpdateContentMutation,
     useDeleteContentMutation,
+    useUpdateFilesMutation,
+    useDeleteContentFileMutation,
 } = learningApi;
 
 export type {

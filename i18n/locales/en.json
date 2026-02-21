@@ -14,6 +14,7 @@
     "circle": "Circle",
     "rectangle": "Rectangle",
     "eraser": "Eraser",
+    "text": "Text",
     "color": "Color",
     "lineWidth": "Line Width",
     "undo": "Undo",
@@ -177,7 +178,16 @@
     "updateQuantityError": "Failed to update quantity",
     "manageQuantity": "Manage Quantity",
     "stagesAdded": "Setup features added",
-    "stagesSaveError": "Failed to save setup features"
+    "stagesSaveError": "Failed to save setup features",
+    "noDescription": "No Description",
+    "deleteFileQuestion": "Are you sure you want to delete this file?",
+    "fileDeleted": "File deleted successfully",
+    "deleteFileError": "Failed to delete file",
+    "deleteStageQuestion": "Are you sure you want to delete this stage?",
+    "stageDeleted": "Stage deleted successfully",
+    "deleteStageError": "Failed to delete stage",
+    "imageSaved": "Image saved",
+    "imageSaveError": "Failed to save image"
   },
   "learning": {
     "title": "Learning",
@@ -231,6 +241,12 @@
     "titleEmpty": "Title cannot be empty",
     "materials": "Materials",
     "updateError": "Failed to update title",
-    "materialsSaved": "All materials saved"
+    "materialsSaved": "All materials saved",
+    "imageLoadError": "Failed to load image",
+    "imageSaved": "Image saved successfully",
+    "imageSaveError": "Failed to save edited image",
+    "deleteFileQuestion": "Are you sure you want to delete this file?",
+    "fileDeleted": "File deleted successfully",
+    "deleteFileError": "Failed to delete file"
   }
 }
